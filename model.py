@@ -1,5 +1,6 @@
 import random
 import numpy as np
+import networkx as nx
 
 def markov_chain_AI(transition_prob_hidden, transition_prob_physical):
     change_hidden = np.random.choice(['U', 'A'],replace=True,p=[transition_prob_hidden, (1 - transition_prob_hidden)])
@@ -15,11 +16,11 @@ def markov_chain_AS(transition_prob_hidden, physical_layer, infectivity, factor,
     if change_hidden == 'U':
         for neighbour in physical_layer.neighbors(node):
             if neighbour in I_t and neighbour in A_t:
-                probability = probability*(1 - infectivity)
+                probability = probability*(1 - random.random()*infectivity)
     else:
         for neighbour in physical_layer.neighbors(node):
             if neighbour in I_t and neighbour in A_t:
-                probability = probability*(1 - factor*infectivity)
+                probability = probability*(1 - random.random()*factor*infectivity)
     change_physical = np.random.choice(['S', 'I'],replace=True,p=[probability, (1 - probability)])
     if change_hidden == 'U' and change_physical == 'I':
         return 'AI'
@@ -31,16 +32,16 @@ def markov_chain_US(_lambda, hidden_layer, physical_layer, infectivity, factor, 
     probability_physical = 1
     for neighbour in hidden_layer.neighbors(node):
         if neighbour in A_t:
-            probability_hidden = probability_hidden*(1 - _lambda)
+            probability_hidden = probability_hidden*(1 - random.random()*_lambda)
     change_hidden = np.random.choice(['U', 'A'],replace=True,p=[probability_hidden, (1 - probability_hidden)])
     if change_hidden == 'U':
         for neighbour in physical_layer.neighbors(node):
             if neighbour in I_t and neighbour in A_t:
-                probability_physical = probability_physical*(1 - infectivity)
+                probability_physical = probability_physical*(1 - random.random()*infectivity)
     else:
         for neighbour in physical_layer.neighbors(node):
             if neighbour in I_t and neighbour in A_t:
-                probability_physical = probability_physical*(1 - factor*infectivity)
+                probability_physical = probability_physical*(1 - random.random()*factor*infectivity)
     change_physical = np.random.choice(['S', 'I'],replace=True,p=[probability_physical, (1 - probability_physical)])
     if change_hidden == 'U' and change_physical == 'I':
         return 'AI'
@@ -82,24 +83,25 @@ def run(physical_nw, hidden_nw, transition_prob_hidden, transition_prob_physical
         if rho is None:
             initial_number = 1
         else:
-            initial_number = int(round(G.order()*rho))
-        initial_infecteds=random.sample(G.nodes(), initial_number)
+            initial_number = int(round(physical_nw.order()*rho))
+        initial_infecteds=random.sample(physical_nw.nodes(), initial_number)
     elif physical_nw.has_node(initial_infecteds):
         initial_infecteds=[initial_infecteds]
 
     times = [tmin]
-    S = list(set(physical_nw.order()) - set(initial_infecteds[:])) #Sustainable
+    all_nodes = list(physical_nw.nodes())
+    S = list(set(all_nodes) - set(initial_infecteds)) #Sustainable
     s_times = [len(S)]
     I = initial_infecteds[:] #Infected
     i_times = [len(I)]
-    U = list(set(physical_nw.order()) - set(initial_infecteds[:])) #Unaware
+    U = list(set(all_nodes) - set(initial_infecteds)) #Unaware
     u_times = [len(U)]
     A = initial_infecteds[:] #Aware
     a_times = [len(A)]
 
     while tmin < tmax:
         S, I, U, A = hidden_chain(physical_nw, hidden_nw, S, I,
-                                U, A, list(physical_nw.order()), transition_prob_hidden,
+                                U, A, all_nodes, transition_prob_hidden,
                                 transition_prob_physical, infectivity, factor, _lambda)
         tmin = tmin+1
         times.append(tmin)
@@ -109,3 +111,16 @@ def run(physical_nw, hidden_nw, transition_prob_hidden, transition_prob_physical
         a_times.append(len(A))
     
     return s_times, i_times, u_times, a_times, times
+
+if __name__ == "__main__":
+    hidden_layer = nx.erdos_renyi_graph(1000, 0.3)
+    physical_layer = nx.erdos_renyi_graph(1000, 0.2)
+    _lambda = 0.15
+    rho = 0.2
+    transition_prob_hidden = 0.6
+    transition_prob_physical = 0.4
+    infectivity = 0.3
+    factor = 1.5
+    s_times, i_times, u_times, a_times, times = run(hidden_layer, physical_layer, transition_prob_hidden, transition_prob_physical,
+                                                    infectivity, factor, _lambda, rho=rho)
+    print(i_times)
