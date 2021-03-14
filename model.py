@@ -34,7 +34,7 @@ def probability_US(physical_layer, transition_prob_hidden, transition_prob_physi
         reasult = probability
     return reasult    
 
-def markov_chain_AS(transition_prob_hidden, transition_prob_physical, physical_layer, infectivity, factor, S_t, I_t, A_t, node, nodes_number):
+def markov_chain_AS(transition_prob_hidden, transition_prob_physical, physical_layer, infectivity, factor, S_t, I_t, A_t, node):
     change_hidden = np.random.choice(['U', 'A'],replace=True,p=[transition_prob_hidden, (1 - transition_prob_hidden)])
     probability_AI = (1 - transition_prob_hidden)*(1 - transition_prob_physical) + transition_prob_hidden*(1 - transition_prob_physical)
     probability = 1
@@ -56,7 +56,7 @@ def markov_chain_AS(transition_prob_hidden, transition_prob_physical, physical_l
     else:
         return change_hidden + change_physical
 
-def markov_chain_US(transition_prob_hidden, transition_prob_physical, _lambda, hidden_layer, physical_layer, infectivity, factor, S_t, I_t, A_t, node, nodes_number):
+def markov_chain_US(transition_prob_hidden, transition_prob_physical, _lambda, hidden_layer, physical_layer, infectivity, factor, S_t, I_t, A_t, node):
     probability_hidden = 1
     probability_physical = 1
     probability_AI = (1 - transition_prob_hidden)*(1 - transition_prob_physical) + transition_prob_hidden*(1 - transition_prob_physical)
@@ -85,7 +85,7 @@ def markov_chain_US(transition_prob_hidden, transition_prob_physical, _lambda, h
     else:
         return change_hidden + change_physical
 
-def hidden_chain(physical_layer, hidden_layer, S_t, I_t, U_t, A_t, nodes, transition_prob_hidden, transition_prob_physical, infectivity, factor, _lambda, nodes_number):
+def hidden_chain(physical_layer, hidden_layer, S_t, I_t, U_t, A_t, nodes, transition_prob_hidden, transition_prob_physical, infectivity, factor, _lambda):
     S = []
     I = []
     U = []
@@ -94,9 +94,9 @@ def hidden_chain(physical_layer, hidden_layer, S_t, I_t, U_t, A_t, nodes, transi
         if node in A_t and node in I_t:
             status = markov_chain_AI(transition_prob_hidden, transition_prob_physical)
         elif node in A_t and node in S_t:
-            status = markov_chain_AS(transition_prob_hidden, transition_prob_physical, physical_layer, infectivity, factor, S_t, I_t, A_t, node, nodes_number)
+            status = markov_chain_AS(transition_prob_hidden, transition_prob_physical, physical_layer, infectivity, factor, S_t, I_t, A_t, node)
         elif node in U_t and node in S_t:
-            status = markov_chain_US(transition_prob_hidden, transition_prob_physical, _lambda, hidden_layer, physical_layer, infectivity, factor, S_t, I_t, A_t, node, nodes_number)
+            status = markov_chain_US(transition_prob_hidden, transition_prob_physical, _lambda, hidden_layer, physical_layer, infectivity, factor, S_t, I_t, A_t, node)
         else:
             status = 'AI'
 
@@ -113,7 +113,7 @@ def hidden_chain(physical_layer, hidden_layer, S_t, I_t, U_t, A_t, nodes, transi
 
 def run(physical_nw, hidden_nw, transition_prob_hidden, transition_prob_physical,
         infectivity, factor, _lambda, initial_infecteds=None,
-        rho = None, tmin=0, tmax=100, nodes_number=1000):
+        rho = None, tmin=0, tmax=100):
 
     #Get initial infected nodes
     if initial_infecteds is None:
@@ -139,7 +139,7 @@ def run(physical_nw, hidden_nw, transition_prob_hidden, transition_prob_physical
     while tmin < tmax:
         S, I, U, A = hidden_chain(physical_nw, hidden_nw, S, I,
                                 U, A, all_nodes, transition_prob_hidden,
-                                transition_prob_physical, infectivity, factor, _lambda, nodes_number)
+                                transition_prob_physical, infectivity, factor, _lambda)
         tmin = tmin+1
         times.append(tmin)
         s_times.append(len(S))
@@ -160,5 +160,5 @@ if __name__ == "__main__":
     infectivity = 0.3
     factor = 0.15
     s_times, i_times, u_times, a_times, times = run(hidden_layer, physical_layer, transition_prob_hidden, transition_prob_physical,
-                                                    infectivity, _lambda, factor, rho=rho, nodes_number=nodes_number)
+                                                    infectivity, _lambda, factor, rho=rho)
     print(i_times)
