@@ -12,7 +12,7 @@ def markov_chain_AI(transition_prob_hidden, transition_prob_physical):
 
 def probability_AS(physical_layer, transition_prob_hidden, transition_prob_physical, factor, I_t, A_t, infectivity, node):
     probability = 1
-    probability_AI = (1 - transition_prob_hidden)*(1 - transition_prob_physical) + transition_prob_hidden*(1 - transition_prob_physical)
+    probability_AI = (1 - transition_prob_physical)
     for neighbour in physical_layer.neighbors(node):
         if neighbour in I_t and neighbour in A_t:
             probability = probability*(1 - probability_AI*factor*infectivity)
@@ -20,7 +20,7 @@ def probability_AS(physical_layer, transition_prob_hidden, transition_prob_physi
 
 def probability_US(physical_layer, transition_prob_hidden, transition_prob_physical, I_t, A_t, infectivity, node):
     probability = 1
-    probability_AI = (1 - transition_prob_hidden)*(1 - transition_prob_physical) + transition_prob_hidden*(1 - transition_prob_physical)
+    probability_AI = (1 - transition_prob_physical)
     for neighbour in physical_layer.neighbors(node):
         if neighbour in I_t and neighbour in A_t:
             probability = probability*(1 - probability_AI*infectivity)
@@ -28,7 +28,7 @@ def probability_US(physical_layer, transition_prob_hidden, transition_prob_physi
 
 def markov_chain_AS(transition_prob_hidden, transition_prob_physical, physical_layer, infectivity, factor, S_t, I_t, A_t, node):
     change_hidden = np.random.choice(['U', 'A'],replace=True,p=[transition_prob_hidden, (1 - transition_prob_hidden)])
-    probability_AI = (1 - transition_prob_hidden)*(1 - transition_prob_physical) + transition_prob_hidden*(1 - transition_prob_physical)
+    probability_AI = (1 - transition_prob_physical)
     probability = 1
     if change_hidden == 'U':
         for neighbour in physical_layer.neighbors(node):
@@ -51,7 +51,7 @@ def markov_chain_AS(transition_prob_hidden, transition_prob_physical, physical_l
 def markov_chain_US(transition_prob_hidden, transition_prob_physical, _lambda, hidden_layer, physical_layer, infectivity, factor, S_t, I_t, A_t, node):
     probability_hidden = 1
     probability_physical = 1
-    probability_AI = (1 - transition_prob_hidden)*(1 - transition_prob_physical) + transition_prob_hidden*(1 - transition_prob_physical)
+    probability_AI = (1 - transition_prob_physical)
     probability_A = probability_AI + (1 - transition_prob_hidden)*transition_prob_physical
     for neighbour in hidden_layer.neighbors(node):
         if neighbour in I_t and neighbour in A_t:
