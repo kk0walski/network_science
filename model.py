@@ -35,13 +35,15 @@ def markov_chain_AS(transition_prob_hidden, transition_prob_physical, physical_l
             if neighbour in I_t and neighbour in A_t:
                 probability = probability*(1 - probability_AI*infectivity)
             elif neighbour in S_t and neighbour in A_t:
-                probability = probability*(1 - probability_AS(physical_layer, transition_prob_hidden, transition_prob_physical, factor, I_t, A_t, infectivity, neighbour))
+                prob_AS = probability_AS(physical_layer, transition_prob_hidden, transition_prob_physical, factor, I_t, A_t, infectivity, neighbour)
+                probability = probability*(1 - prob_AS)
     else:
         for neighbour in physical_layer.neighbors(node):
             if neighbour in I_t and neighbour in A_t:
                 probability = probability*(1 - probability_AI*factor*infectivity)
             elif neighbour in S_t and neighbour in A_t:
-                probability = probability*(1 - probability_US(physical_layer, transition_prob_hidden, transition_prob_physical, I_t, A_t, infectivity, neighbour))
+                prob_US = probability_US(physical_layer, transition_prob_hidden, transition_prob_physical, I_t, A_t, infectivity, neighbour)
+                probability = probability*(1 - prob_US)
     change_physical = np.random.choice(['S', 'I'],replace=True,p=[probability, (1 - probability)])
     if change_hidden == 'U' and change_physical == 'I':
         return 'AI'
@@ -57,7 +59,8 @@ def markov_chain_US(transition_prob_hidden, transition_prob_physical, _lambda, h
         if neighbour in I_t and neighbour in A_t:
             probability_hidden = probability_hidden*(1 - probability_A*_lambda)
         elif neighbour in S_t and neighbour in A_t:
-            probability_hidden = probability_hidden*((1 - transition_prob_hidden) + transition_prob_hidden*probability_AS(physical_layer, transition_prob_hidden, transition_prob_physical, factor, I_t, A_t, infectivity, neighbour))
+            prob_UI = probability_US(physical_layer, transition_prob_hidden, transition_prob_physical, I_t, A_t, infectivity, node)
+            probability_hidden = probability_hidden*(1 - prob_UI*transition_prob_hidden)
     change_hidden = np.random.choice(['U', 'A'],replace=True,p=[probability_hidden, (1 - probability_hidden)])
     if change_hidden == 'U':
         for neighbour in physical_layer.neighbors(node):
@@ -70,7 +73,8 @@ def markov_chain_US(transition_prob_hidden, transition_prob_physical, _lambda, h
             if neighbour in I_t and neighbour in A_t:
                 probability_physical = probability_physical*(1 - probability_AI*factor*infectivity)
             elif neighbour in S_t and neighbour in A_t:
-                probability_physical = probability_physical*(1 - probability_US(physical_layer, transition_prob_hidden, transition_prob_physical, I_t, A_t, infectivity, neighbour))
+                prob_US = probability_US(physical_layer, transition_prob_hidden, transition_prob_physical, I_t, A_t, infectivity, neighbour)
+                probability_physical = probability_physical*(1 - prob_US)
     change_physical = np.random.choice(['S', 'I'],replace=True,p=[probability_physical, (1 - probability_physical)])
     if change_hidden == 'U' and change_physical == 'I':
         return 'AI'
