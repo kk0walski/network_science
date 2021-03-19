@@ -8,7 +8,7 @@ class MarkovModel():
 
     def __init__(self, physical_layer, hidden_layer, hidden_transition_prob, physical_transition_prob,
         infectivity, factor, _lambda, initial_infecteds=None,
-        rho = None, tmin=0, tmax=100, epsilon = 1e-3):
+        rho = None, tmin=0, tmax=60, epsilon = 1e-5):
 
         self.physical_nw = physical_layer
         self.hidden_nw = hidden_layer
@@ -20,9 +20,7 @@ class MarkovModel():
         self.tmin = tmin
         self.tmax = tmax
         self.epsilon = epsilon
-        self.init_simulation(initial_infecteds, rho, tmin)
 
-    def init_simulation(self, initial_infecteds=None, rho = None, tmin=0):
         if initial_infecteds is None:
             if rho is None:
                 self.initial_number = 1
@@ -31,8 +29,11 @@ class MarkovModel():
             self.initial_infecteds=random.sample(self.physical_nw.nodes(), self.initial_number)
         elif self.physical_nw.has_node(initial_infecteds):
             self.initial_infecteds=[initial_infecteds]
+        self.init_simulation()
 
-        self.times = [tmin]
+    def init_simulation(self):
+        self.tmin = 0
+        self.times = [self.tmin]
         all_nodes = list(self.physical_nw.nodes())
         self.S = list(set(all_nodes) - set(self.initial_infecteds)) #Sustainable
         self.S_t = [len(self.S)]
@@ -42,6 +43,10 @@ class MarkovModel():
         self.U_t = [len(self.U)]
         self.A = self.initial_infecteds[:] #Aware
         self.A_t = [len(self.A)]
+
+    def set_infectivity(self, infectivity):
+        self.infectivity_unaware = infectivity
+        self.infectivity_aware = factor*infectivity
 
     def markov_chain_AI(self):
         change_hidden = np.random.choice(['U', 'A'],replace=True,p=[self.hidden_transition_prob, (1 - self.hidden_transition_prob)])
@@ -141,25 +146,30 @@ class MarkovModel():
         new_U = []
         new_A = []
 
-        for node in nodes:
-            if node in self.A and node in self.I:
-                status = self.markov_chain_AI()
-            elif node in self.A and node in self.S:
-                status = self.markov_chain_AS(node)
-            elif node in self.U and node in self.S:
-                status = self.markov_chain_US(node)
-            else:
-                status = 'AI'
+        if len(self.I) > 0:
+            for node in nodes:
+                if node in self.A and node in self.I:
+                    status = self.markov_chain_AI()
+                elif node in self.A and node in self.S:
+                    status = self.markov_chain_AS(node)
+                elif node in self.U and node in self.S:
+                    status = self.markov_chain_US(node)
+                else:
+                    status = 'AI'
 
-            if status[1] == 'S':
+                if status[1] == 'S':
+                    new_S.append(node)
+                else:
+                    new_I.append(node)
+
+                if status[0] == 'U':
+                    new_U.append(node)
+                else:
+                    new_A.append(node)
+        else:
+            for node in nodes:
                 new_S.append(node)
-            else:
-                new_I.append(node)
-
-            if status[0] == 'U':
                 new_U.append(node)
-            else:
-                new_A.append(node)
 
         self.S = new_S[:]
         self.A = new_A[:]
@@ -187,8 +197,8 @@ if __name__ == "__main__":
     hidden_transition_prob = 0.6
     physical_transition_prob = 0.4
     factor = 0.15
+    infectivity = 0.1
 
-    infectivity = 0.2
     sim = MarkovModel(hidden_layer, physical_layer, hidden_transition_prob, physical_transition_prob,
                                                     infectivity, _lambda, factor, rho=rho)
     sim.run()
@@ -198,10 +208,13 @@ if __name__ == "__main__":
 
     # i_probs = []
     # infectivities = []
+    # sim = MarkovModel(hidden_layer, physical_layer, hidden_transition_prob, physical_transition_prob,
+    #                                                 infectivity, _lambda, factor, rho=rho)
     # for infectivity in progressbar.progressbar(np.linspace(0, 1, 100)):
-    #     s_times, i_times, u_times, a_times, times = run(hidden_layer, physical_layer, hidden_transition_prob, physical_transition_prob,
-    #                                                     infectivity, _lambda, factor, rho=rho)
+    #     sim.set_infectivity(infectivity)
     #     infectivities.append(infectivity)
-    #     i_probs.append(np.mean(i_times)/nodes_number)
+    #     sim.run()
+    #     i_probs.append(np.mean(sim.I_t)/nodes_number)
+    #     sim.init_simulation()
     # plt.plot(infectivities, i_probs)
     # plt.show()
