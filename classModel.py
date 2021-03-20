@@ -2,13 +2,14 @@ import random
 import progressbar
 import numpy as np
 import networkx as nx
+import multiprocessing
 import matplotlib.pyplot as plt
 
 class MarkovModel():
 
     def __init__(self, physical_layer, hidden_layer, hidden_transition_prob, physical_transition_prob,
         infectivity, factor, _lambda, initial_infecteds=None,
-        rho = None, tmin=0, tmax=60, epsilon = 1e-5):
+        rho = None, tmin=0, tmax=100, epsilon = 1e-5):
 
         self.physical_nw = physical_layer
         self.hidden_nw = hidden_layer
@@ -58,15 +59,25 @@ class MarkovModel():
 
     def probability_AS(self, node):
         _sum = 0
+        probability = 1
+        probability_AI = (1 - self.physical_transition_prob)
         for neighbour in self.physical_nw.neighbors(node):
-            _sum = _sum + self.infectivity_aware*random.random()/(10*5)
-        return _sum
+            if neighbour in self.I and neighbour in self.A:
+                probability = probability*(1 - probability_AI*self.infectivity_aware)
+            else:
+                _sum = _sum + self.infectivity_aware*random.random()*self.epsilon
+        return (1 - _sum)*probability
 
     def probability_US(self, node):
         _sum = 0
+        probability = 1
+        probability_AI = (1 - self.physical_transition_prob)
         for neighbour in self.physical_nw.neighbors(node):
-             _sum = _sum + self.infectivity_unaware*random.random()/(10*5)
-        return _sum
+            if neighbour in self.I and neighbour in self.A:
+                probability = probability*(1 - probability_AI*self.infectivity_unaware)
+            else:
+                 _sum = _sum + self.infectivity_unaware*random.random()*self.epsilon
+        return (1 - _sum)*probability
 
     def markov_chain_AS(self, node):
         change_hidden = np.random.choice(['U', 'A'],replace=True,p=[self.hidden_transition_prob, (1 - self.hidden_transition_prob)])
@@ -139,6 +150,16 @@ class MarkovModel():
         else:
             return change_hidden + change_physical
 
+    def chain(self, node):
+        if node in self.A and node in self.I:
+            return self.markov_chain_AI()
+        elif node in self.A and node in self.S:
+            return self.markov_chain_AS(node)
+        elif node in self.U and node in self.S:
+            return self.markov_chain_US(node)
+        else:
+            return 'AI'
+
     def hidden_chain(self, nodes):
 
         new_S = []
@@ -148,14 +169,7 @@ class MarkovModel():
 
         if len(self.I) > 0:
             for node in nodes:
-                if node in self.A and node in self.I:
-                    status = self.markov_chain_AI()
-                elif node in self.A and node in self.S:
-                    status = self.markov_chain_AS(node)
-                elif node in self.U and node in self.S:
-                    status = self.markov_chain_US(node)
-                else:
-                    status = 'AI'
+                status = self.chain(node)
 
                 if status[1] == 'S':
                     new_S.append(node)
@@ -199,22 +213,22 @@ if __name__ == "__main__":
     factor = 0.15
     infectivity = 0.1
 
-    sim = MarkovModel(hidden_layer, physical_layer, hidden_transition_prob, physical_transition_prob,
-                                                    infectivity, _lambda, factor, rho=rho)
-    sim.run()
-    print(sim.I_t)
-    print(np.mean(np.array(sim.I_t)/nodes_number))
-
-
-    # i_probs = []
-    # infectivities = []
     # sim = MarkovModel(hidden_layer, physical_layer, hidden_transition_prob, physical_transition_prob,
     #                                                 infectivity, _lambda, factor, rho=rho)
-    # for infectivity in progressbar.progressbar(np.linspace(0, 1, 100)):
-    #     sim.set_infectivity(infectivity)
-    #     infectivities.append(infectivity)
-    #     sim.run()
-    #     i_probs.append(np.mean(sim.I_t)/nodes_number)
-    #     sim.init_simulation()
-    # plt.plot(infectivities, i_probs)
-    # plt.show()
+    # sim.run()
+    # print(sim.I_t)
+    # print(np.mean(np.array(sim.I_t)/nodes_number))
+
+
+    i_probs = []
+    infectivities = []
+    sim = MarkovModel(hidden_layer, physical_layer, hidden_transition_prob, physical_transition_prob,
+                                                    infectivity, _lambda, factor, rho=rho)
+    for infectivity in progressbar.progressbar(np.linspace(0, 1, 100)):
+        sim.set_infectivity(infectivity)
+        infectivities.append(infectivity)
+        sim.run()
+        i_probs.append(np.mean(sim.I_t)/nodes_number)
+        sim.init_simulation()
+    plt.plot(infectivities, i_probs)
+    plt.show()
