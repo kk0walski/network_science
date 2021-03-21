@@ -79,7 +79,7 @@ class MarkovModel():
                 probability_hidden = probability_hidden*(1 - self.probability_A*self._lambda)
             elif neighbour in self.S and neighbour in self.A:
                 prob_AS = self.probability_AS_second(neighbour)
-                probability_temp = (1 - self.hidden_transition_prob + (1 - prob_AS)*self.hidden_transition_prob
+                probability_temp = (1 - self.hidden_transition_prob + (1 - prob_AS)*self.hidden_transition_prob)
                 probability_hidden = probability_hidden*(1 - probability_temp*self._lambda)
             else:
                 prob_US = self.probability_US_second(neighbour)
@@ -117,7 +117,8 @@ class MarkovModel():
             elif neighbour in self.S and neighbour in self.A:
                 prob_AS = self.probability_AS_second(neighbour)
                 prob_US = self.probability_US_second(neighbour)
-                probability = probability*((1-self.hidden_transition_prob)*prob_AS + self.hidden_transition_prob*prob_US)
+                probability_temp = ((1-self.hidden_transition_prob)*prob_AS + self.hidden_transition_prob*prob_US)
+                probability = probability*(1 - probability_temp*self.infectivity_aware)
             else:
                 prob_US = self.probability_US_second(neighbour)
                 prob_AS = self.probability_AS_second(neighbour)
@@ -134,7 +135,8 @@ class MarkovModel():
             elif neighbour in self.S and neighbour in self.A:
                 prob_AS = self.probability_AS_second(neighbour)
                 prob_US = self.probability_US_second(neighbour)
-                probability = probability*((1-self.hidden_transition_prob)*prob_AS + self.hidden_transition_prob*prob_US)
+                probability_temp = ((1-self.hidden_transition_prob)*prob_AS + self.hidden_transition_prob*prob_US)
+                probability = probability*(1 - probability_temp*self.infectivity_unaware)
             else:
                 prob_US = self.probability_US_second(neighbour)
                 prob_AS = self.probability_AS_second(neighbour)
@@ -186,7 +188,7 @@ class MarkovModel():
                 probability_hidden = probability_hidden*(1 - self.probability_A*self._lambda)
             elif neighbour in self.S and neighbour in self.A:
                 prob_AS = self.probability_AS(neighbour)
-                probability_temp = (1 - self.hidden_transition_prob + (1 - prob_AS)*self.hidden_transition_prob
+                probability_temp = (1 - self.hidden_transition_prob + (1 - prob_AS)*self.hidden_transition_prob)
                 probability_hidden = probability_hidden*(1 - probability_temp*self._lambda)
             else:
                 prob_r = self.r_prob(neighbour)
@@ -289,25 +291,25 @@ if __name__ == "__main__":
     factor = 0.15
     infectivity = 0.1
 
-    # sim = MarkovModel(hidden_layer, physical_layer, hidden_transition_prob, physical_transition_prob,
-    #                                                 infectivity, _lambda, factor, rho=rho)
-    # sim.run()
-    # print(sim.I_t)
-    # print(np.mean(np.array(sim.I_t)/nodes_number))
-
-
-    i_probs = []
-    a_probs = []
-    infectivities = []
     sim = MarkovModel(hidden_layer, physical_layer, hidden_transition_prob, physical_transition_prob,
-                                                    infectivity, _lambda, factor, rho=rho, tmax=60)
-    for infectivity in progressbar.progressbar(np.linspace(0, 1, 20)):
-        sim.set_infectivity(infectivity)
-        infectivities.append(infectivity)
-        sim.run()
-        i_probs.append(np.mean(sim.I_t)/nodes_number)
-        a_probs.append(np.mean(sim.A_t)/nodes_number)
-        sim.init_simulation()
-    plt.plot(infectivities, i_probs)
-    plt.plot(infectivities, a_probs)
-    plt.show()
+                                                    infectivity, _lambda, factor, rho=rho)
+    sim.run()
+    print(sim.I_t)
+    print(np.mean(np.array(sim.I_t)/nodes_number))
+
+
+    # i_probs = []
+    # a_probs = []
+    # infectivities = []
+    # sim = MarkovModel(hidden_layer, physical_layer, hidden_transition_prob, physical_transition_prob,
+    #                                                 infectivity, _lambda, factor, rho=rho, tmax=60)
+    # for infectivity in progressbar.progressbar(np.linspace(0, 1, 20)):
+    #     sim.set_infectivity(infectivity)
+    #     infectivities.append(infectivity)
+    #     sim.run()
+    #     i_probs.append(np.mean(sim.I_t)/nodes_number)
+    #     a_probs.append(np.mean(sim.A_t)/nodes_number)
+    #     sim.init_simulation()
+    # plt.plot(infectivities, i_probs)
+    # plt.plot(infectivities, a_probs)
+    # plt.show()
