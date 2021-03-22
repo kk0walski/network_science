@@ -64,7 +64,7 @@ class MarkovModel():
             if neighbour in self.I and neighbour in self.A:
                 probability_hidden = probability_hidden*(1 - self.probability_A*self._lambda)
             elif neighbour in self.S and neighbour in self.A:
-                prob_US = self.probability_US_second(neighbour)
+                prob_US = self.probability_US(neighbour)
                 probability_temp = (1 - self.hidden_transition_prob + (1 - prob_US)*self.hidden_transition_prob)
                 probability_hidden = probability_hidden*(1 - probability_temp*self._lambda)
         return probability_hidden
@@ -75,60 +75,23 @@ class MarkovModel():
             if neighbour in self.I and neighbour in self.A:
                 probability_hidden = probability_hidden*(1 - self.probability_A*self._lambda)
             elif neighbour in self.S and neighbour in self.A:
-                prob_US = self.probability_US_second(neighbour)
+                prob_US = self.probability_US(neighbour)
                 probability_temp = (1 - self.hidden_transition_prob + (1 - prob_US)*self.hidden_transition_prob)
                 probability_hidden = probability_hidden*(1 - probability_temp*self._lambda)
             else:
-                prob_US = self.probability_US_second(neighbour)
+                prob_US = self.probability_US(neighbour)
                 prob_r = self.r_prob_second(neighbour)
                 probability_temp = (1 - prob_r*prob_US)
                 probability_hidden = probability_hidden*(1 - probability_temp*self._lambda)
         return probability_hidden
 
-
-    def probability_AS_second(self, node):
+    def probability_AS(self, node):
         _sum = (1 - len(list(self.physical_nw.neighbors(node)))*self.epsilon*self.infectivity_aware)
         return _sum
 
-    def probability_US_second(self, node):
+    def probability_US(self, node):
         _sum = (1 - len(list(self.physical_nw.neighbors(node)))*self.epsilon*self.infectivity_unaware)
         return _sum
-
-    def probability_AS(self, node):
-        probability = 1
-        for neighbour in self.physical_nw.neighbors(node):
-            if neighbour in self.I and neighbour in self.A:
-                probability = probability*(1 - self.probability_AI*self.infectivity_aware)
-            elif neighbour in self.S and neighbour in self.A:
-                prob_AS = self.probability_AS_second(neighbour)
-                prob_US = self.probability_US_second(neighbour)
-                probability_temp = ((1-self.hidden_transition_prob)*prob_AS + self.hidden_transition_prob*prob_US)
-                probability = probability*(1 - probability_temp*self.infectivity_aware)
-            else:
-                prob_US = self.probability_US_second(neighbour)
-                prob_AS = self.probability_AS_second(neighbour)
-                prob_r = self.r_prob_second(neighbour)
-                probability_temp = ((1-prob_r)*(1 - prob_AS) + prob_r*(1-prob_US))
-                probability = probability*(1 - probability_temp*self.infectivity_aware)
-        return probability
-
-    def probability_US(self, node):
-        probability = 1
-        for neighbour in self.physical_nw.neighbors(node):
-            if neighbour in self.I and neighbour in self.A:
-                probability = probability*(1 - self.probability_AI*self.infectivity_unaware)
-            elif neighbour in self.S and neighbour in self.A:
-                prob_AS = self.probability_AS_second(neighbour)
-                prob_US = self.probability_US_second(neighbour)
-                probability_temp = ((1-self.hidden_transition_prob)*prob_AS + self.hidden_transition_prob*prob_US)
-                probability = probability*(1 - probability_temp*self.infectivity_unaware)
-            else:
-                prob_US = self.probability_US_second(neighbour)
-                prob_AS = self.probability_AS_second(neighbour)
-                prob_r = self.r_prob_second(neighbour)
-                probability_temp = ((1-prob_r)*(1 - prob_AS) + prob_r*(1-prob_US))
-                probability = probability*(1 - probability_temp*self.infectivity_unaware)
-        return probability
 
     def markov_chain_AS(self, node):
         change_hidden = np.random.choice(['U', 'A'],replace=True,p=[self.hidden_transition_prob, (1 - self.hidden_transition_prob)])
@@ -262,7 +225,7 @@ class MarkovModel():
 
     def run(self):
         all_nodes = list(self.physical_nw.nodes())
-        for i in range(self.tmin, self.tmax):
+        for i in progressbar.progressbar(range(self.tmin, self.tmax)):
             self.hidden_chain(all_nodes)
             self.times.append(i)
 
@@ -301,7 +264,7 @@ if __name__ == "__main__":
     a_probs = []
     infectivities = []
     sim = MarkovModel(physical_layer, hidden_layer, hidden_transition_prob, physical_transition_prob,
-                                                    infectivity, factor, _lambda, rho=rho, tmax=100)
+                                                    infectivity, factor, _lambda, rho=rho)
     for infectivity in progressbar.progressbar(np.linspace(0, 1, 20)):
         sim.set_infectivity(infectivity)
         infectivities.append(infectivity)
