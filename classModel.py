@@ -8,7 +8,7 @@ class MarkovModel():
 
     def __init__(self, physical_layer, hidden_layer, hidden_transition_prob, physical_transition_prob,
         infectivity, factor, _lambda, initial_infecteds=None,
-        rho = None, tmin=0, tmax=100, epsilon = 1e-5):
+        rho = None, tmin=0, tmax=60, epsilon = 1e-5):
 
         self.physical_nw = physical_layer
         self.hidden_nw = hidden_layer
@@ -158,7 +158,7 @@ class MarkovModel():
                     prob_AS = self.probability_AS(neighbour)
                     prob_US = self.probability_US(neighbour)
                     probability_temp = ((1-prob_r)*(1 - prob_AS) + prob_r*(1-prob_US))
-                    probability = probability*(1 - probability_temp*self.infectivity_unaware)
+                    probability = probability*(1 - probability_temp*self.infectivity_aware)
         change_physical = np.random.choice(['S', 'I'],replace=True,p=[probability, (1 - probability)])
         if change_hidden == 'U' and change_physical == 'I':
             return 'AI'
@@ -257,26 +257,36 @@ class MarkovModel():
 
     def run(self):
         all_nodes = list(self.physical_nw.nodes())
-        while self.tmin < self.tmax:
+        for i in progressbar.progressbar(range(self.tmin, self.tmax)):
             self.hidden_chain(all_nodes)
-            self.tmin = self.tmin+1
-            self.times.append(self.tmin)
+            self.times.append(i)
+
+def random_edge(graph):
+    edges = list(graph.edges)
+    nonedges = list(nx.non_edges(graph))
+
+    # random edge choice
+    chosen_edge = random.choice(edges)
+    chosen_nonedge = random.choice([x for x in nonedges if chosen_edge[0] == x[0]])
+    graph.add_edge(chosen_nonedge[0], chosen_nonedge[1])
+    return graph
 
 if __name__ == "__main__":
     nodes_number=1000
     s = nx.utils.powerlaw_sequence(1000, 2.5) #100 nodes, power-law exponent 2.5
     physical_layer = nx.expected_degree_graph(s, selfloops=False)
-    s = nx.utils.powerlaw_sequence(1000, 2.4) #100 nodes, power-law exponent 2.5
-    hidden_layer = nx.expected_degree_graph(s, selfloops=False)
-    _lambda = 0.1
+    hidden_layer = physical_layer.copy()
+    for i in range(400):
+        hidden_layer = random_edge(hidden_layer)
+    _lambda = 0.15
     rho = 0.2
     hidden_transition_prob = 0.6
     physical_transition_prob = 0.4
-    factor = 0.15
-    infectivity = 0.1
+    factor = 0.001
+    infectivity = 0.05
 
-    # sim = MarkovModel(hidden_layer, physical_layer, hidden_transition_prob, physical_transition_prob,
-    #                                                 infectivity, _lambda, factor, rho=rho)
+    # sim = MarkovModel(physical_layer, hidden_layer, hidden_transition_prob, physical_transition_prob,
+    #                                                 infectivity, factor, _lambda, rho=rho)
     # sim.run()
     # print(sim.I_t)
     # print(np.mean(np.array(sim.I_t)/nodes_number))
@@ -285,8 +295,8 @@ if __name__ == "__main__":
     i_probs = []
     a_probs = []
     infectivities = []
-    sim = MarkovModel(hidden_layer, physical_layer, hidden_transition_prob, physical_transition_prob,
-                                                    infectivity, _lambda, factor, rho=rho, tmax=100)
+    sim = MarkovModel(physical_layer, hidden_layer, hidden_transition_prob, physical_transition_prob,
+                                                    infectivity, factor, _lambda, rho=rho, tmax=100)
     for infectivity in progressbar.progressbar(np.linspace(0, 1, 20)):
         sim.set_infectivity(infectivity)
         infectivities.append(infectivity)
