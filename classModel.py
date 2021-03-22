@@ -240,24 +240,29 @@ class MarkovModel():
                     new_U.append(node)
                 else:
                     new_A.append(node)
-        else:
-            for node in nodes:
-                new_S.append(node)
-                new_U.append(node)
 
-        self.S = new_S[:]
-        self.A = new_A[:]
-        self.I = new_I[:]
-        self.U = new_U[:]
-        self.S_t.append(len(new_S))
-        self.I_t.append(len(new_I))
-        self.U_t.append(len(new_U))
-        self.A_t.append(len(new_A))
+            self.S = new_S[:]
+            self.A = new_A[:]
+            self.I = new_I[:]
+            self.U = new_U[:]
+            self.S_t.append(len(new_S))
+            self.I_t.append(len(new_I))
+            self.U_t.append(len(new_U))
+            self.A_t.append(len(new_A))
+        else:
+            self.S = nodes.copy()
+            self.A = []
+            self.I = []
+            self.U = nodes.copy()
+            self.S_t.append(len(nodes))
+            self.I_t.append(0)
+            self.U_t.append(len(nodes))
+            self.A_t.append(0)
 
 
     def run(self):
         all_nodes = list(self.physical_nw.nodes())
-        for i in progressbar.progressbar(range(self.tmin, self.tmax)):
+        for i in range(self.tmin, self.tmax):
             self.hidden_chain(all_nodes)
             self.times.append(i)
 
@@ -283,7 +288,7 @@ if __name__ == "__main__":
     hidden_transition_prob = 0.6
     physical_transition_prob = 0.4
     factor = 0.001
-    infectivity = 0.05
+    infectivity = 0
 
     # sim = MarkovModel(physical_layer, hidden_layer, hidden_transition_prob, physical_transition_prob,
     #                                                 infectivity, factor, _lambda, rho=rho)
