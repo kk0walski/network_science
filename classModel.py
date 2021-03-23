@@ -3,6 +3,7 @@ import progressbar
 import numpy as np
 import networkx as nx
 import matplotlib.pyplot as plt
+import multiprocessing as mp
 
 class MarkovModel():
 
@@ -176,33 +177,38 @@ class MarkovModel():
         else:
             return change_hidden + change_physical
 
+    def run_process(self, node):
+        if node in self.A and node in self.I:
+            status = self.markov_chain_AI()
+        elif node in self.A and node in self.S:
+            status = self.markov_chain_AS(node)
+        elif node in self.U and node in self.S:
+            status = self.markov_chain_US(node)
+        else:
+            status = 'AI'
+        return (node, status)
+
     def hidden_chain(self, nodes):
 
         new_S = []
         new_I = []
         new_U = []
         new_A = []
-
+        pool = mp.Pool(processes=mp.cpu_count())
         if len(self.I) > 0:
-            for node in nodes:
-                if node in self.A and node in self.I:
-                    status = self.markov_chain_AI()
-                elif node in self.A and node in self.S:
-                    status = self.markov_chain_AS(node)
-                elif node in self.U and node in self.S:
-                    status = self.markov_chain_US(node)
+            proc_queue = pool.map_async(self.run_process, nodes)
+            proc_queue.wait()
+            reasult = proc_queue.get()
+            for element in reasult:
+                if element[1][1] == 'S':
+                    new_S.append(element[0])
                 else:
-                    status = 'AI'
+                    new_I.append(element[0])
 
-                if status[1] == 'S':
-                    new_S.append(node)
+                if element[1][0] == 'U':
+                    new_U.append(element[0])
                 else:
-                    new_I.append(node)
-
-                if status[0] == 'U':
-                    new_U.append(node)
-                else:
-                    new_A.append(node)
+                    new_A.append(element[0])
 
             self.S = new_S[:]
             self.A = new_A[:]
@@ -266,26 +272,26 @@ if __name__ == "__main__":
     factor = 1e-4
     infectivity = 0.1
 
-    # sim = MarkovModel(physical_layer, hidden_layer, hidden_transition_prob, physical_transition_prob,
-    #                                                 infectivity, factor, _lambda, rho=rho)
-    # sim.run()
-    # print(sim.I_t)
-    # print(np.mean(np.array(sim.I_t)/nodes_number))
-
-
-    i_probs = []
-    a_probs = []
-    infectivities = []
     sim = MarkovModel(physical_layer, hidden_layer, hidden_transition_prob, physical_transition_prob,
                                                     infectivity, factor, _lambda, rho=rho)
-    for infectivity in progressbar.progressbar(np.linspace(0, 1, 20)):
-        sim.set_infectivity(infectivity)
-        infectivities.append(infectivity)
-        sim.run()
-        i_probs.append(np.mean(sim.I_t)/nodes_number)
-        a_probs.append(np.mean(sim.A_t)/nodes_number)
-        sim.init_simulation()
-    plt.plot(infectivities, i_probs)
-    print(i_probs)
-    plt.plot(infectivities, a_probs)
-    plt.show()
+    sim.run()
+    print(sim.I_t)
+    print(np.mean(np.array(sim.I_t)/nodes_number))
+
+
+    # i_probs = []
+    # a_probs = []
+    # infectivities = []
+    # sim = MarkovModel(physical_layer, hidden_layer, hidden_transition_prob, physical_transition_prob,
+    #                                                 infectivity, factor, _lambda, rho=rho)
+    # for infectivity in progressbar.progressbar(np.linspace(0, 1, 20)):
+    #     sim.set_infectivity(infectivity)
+    #     infectivities.append(infectivity)
+    #     sim.run()
+    #     i_probs.append(np.mean(sim.I_t)/nodes_number)
+    #     a_probs.append(np.mean(sim.A_t)/nodes_number)
+    #     sim.init_simulation()
+    # plt.plot(infectivities, i_probs)
+    # print(i_probs)
+    # plt.plot(infectivities, a_probs)
+    # plt.show()
