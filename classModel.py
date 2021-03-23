@@ -21,7 +21,7 @@ class MarkovModel():
         self.tmax = tmax
         self.epsilon = epsilon
         self.probability_AI = (1 - self.physical_transition_prob)
-        self.probability_A = self.probability_AI + (1 - self.hidden_transition_prob)*self.physical_transition_prob
+        self.probability_A = (1 - self.physical_transition_prob*self.hidden_transition_prob)
 
         if initial_infecteds is None:
             if rho is None:
@@ -51,8 +51,8 @@ class MarkovModel():
         self.infectivity_aware = factor*infectivity
 
     def markov_chain_AI(self):
-        change_hidden = np.random.choice(['U', 'A'],replace=True,p=[self.hidden_transition_prob, (1 - self.hidden_transition_prob)])
-        change_physical = np.random.choice(['S', 'I'],replace=True,p=[self.physical_transition_prob, (1 - self.physical_transition_prob)])
+        change_hidden = np.random.choice(['U', 'A'], p=[self.hidden_transition_prob, (1 - self.hidden_transition_prob)])
+        change_physical = np.random.choice(['S', 'I'], p=[self.physical_transition_prob, (1 - self.physical_transition_prob)])
         if change_hidden == 'U' and change_physical == 'I':
             return 'AI'
         else:
@@ -94,7 +94,7 @@ class MarkovModel():
         return _sum
 
     def markov_chain_AS(self, node):
-        change_hidden = np.random.choice(['U', 'A'],replace=True,p=[self.hidden_transition_prob, (1 - self.hidden_transition_prob)])
+        change_hidden = np.random.choice(['U', 'A'],p=[self.hidden_transition_prob, (1 - self.hidden_transition_prob)])
         probability = 1
         if change_hidden == 'U':
             for neighbour in self.physical_nw.neighbors(node):
@@ -122,7 +122,7 @@ class MarkovModel():
                     prob_US = self.probability_US(neighbour)
                     probability_temp = ((1-prob_r)*(1 - prob_AS) + prob_r*(1-prob_US))
                     probability = probability*(1 - probability_temp*self.infectivity_aware)
-        change_physical = np.random.choice(['S', 'I'],replace=True,p=[probability, (1 - probability)])
+        change_physical = np.random.choice(['S', 'I'],p=[probability, (1 - probability)])
         if change_hidden == 'U' and change_physical == 'I':
             return 'AI'
         else:
@@ -143,7 +143,7 @@ class MarkovModel():
                 prob_US = self.probability_US(neighbour)
                 probability_temp = (1 - prob_r*prob_US)
                 probability_hidden = probability_hidden*(1 - probability_temp*self._lambda)
-        change_hidden = np.random.choice(['U', 'A'],replace=True,p=[probability_hidden, (1 - probability_hidden)])
+        change_hidden = np.random.choice(['U', 'A'],p=[probability_hidden, (1 - probability_hidden)])
         if change_hidden == 'U':
             for neighbour in self.physical_nw.neighbors(node):
                 if neighbour in self.I and neighbour in self.A:
@@ -170,7 +170,7 @@ class MarkovModel():
                     prob_US = self.probability_US(neighbour)
                     probability_temp = ((1-prob_r)*(1 - prob_AS) + prob_r*(1-prob_US))
                     probability_physical = probability_physical*(1 - probability_temp*self.infectivity_aware)
-        change_physical = np.random.choice(['S', 'I'],replace=True,p=[probability_physical, (1 - probability_physical)])
+        change_physical = np.random.choice(['S', 'I'],p=[probability_physical, (1 - probability_physical)])
         if change_hidden == 'U' and change_physical == 'I':
             return 'AI'
         else:
@@ -229,6 +229,20 @@ class MarkovModel():
             self.hidden_chain(all_nodes)
             self.times.append(i)
 
+def generate_graph(nodes):
+    while True:  
+        s=[]
+        while len(s)<nodes:
+            nextval = int(nx.utils.powerlaw_sequence(1, 2.5)[0]) #100 nodes, power-law exponent 2.5
+            if nextval!=0:
+                s.append(nextval)
+        if sum(s)%2 == 0:
+            break
+    G = nx.configuration_model(s)
+    G=nx.Graph(G) # remove parallel edges
+    G.remove_edges_from(nx.selfloop_edges(G))
+    return G
+
 def random_edge(graph):
     edges = list(graph.edges)
     nonedges = list(nx.non_edges(graph))
@@ -241,8 +255,7 @@ def random_edge(graph):
 
 if __name__ == "__main__":
     nodes_number=1000
-    s = nx.utils.powerlaw_sequence(1000, 2.5) #100 nodes, power-law exponent 2.5
-    physical_layer = nx.expected_degree_graph(s, selfloops=False)
+    physical_layer = generate_graph(nodes_number)
     hidden_layer = physical_layer.copy()
     for i in range(400):
         hidden_layer = random_edge(hidden_layer)
@@ -250,8 +263,8 @@ if __name__ == "__main__":
     rho = 0.2
     hidden_transition_prob = 0.6
     physical_transition_prob = 0.4
-    factor = 0.001
-    infectivity = 0
+    factor = 1e-4
+    infectivity = 0.1
 
     # sim = MarkovModel(physical_layer, hidden_layer, hidden_transition_prob, physical_transition_prob,
     #                                                 infectivity, factor, _lambda, rho=rho)
