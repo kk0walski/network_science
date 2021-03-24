@@ -9,7 +9,7 @@ class MarkovModel():
 
     def __init__(self, physical_layer, hidden_layer, hidden_transition_prob, physical_transition_prob,
         infectivity, factor, _lambda, initial_infecteds=None,
-        rho = None, tmin=0, tmax=60, epsilon = 1e-5):
+        rho = None, tmin=0, tmax=100, epsilon = 1e-5):
 
         self.physical_nw = physical_layer
         self.hidden_nw = hidden_layer
@@ -38,13 +38,13 @@ class MarkovModel():
         self.tmin = 0
         self.times = [self.tmin]
         all_nodes = list(self.physical_nw.nodes())
-        self.S = list(set(all_nodes) - set(self.initial_infecteds)) #Sustainable
+        self.S = tuple(set(all_nodes) - set(self.initial_infecteds)) #Sustainable
         self.S_t = [len(self.S)]
-        self.I = self.initial_infecteds[:] #Infected
+        self.I = tuple(self.initial_infecteds[:]) #Infected
         self.I_t = [len(self.I)]
-        self.U = list(set(all_nodes) - set(self.initial_infecteds)) #Unaware
+        self.U = tuple(list(set(all_nodes) - set(self.initial_infecteds))) #Unaware
         self.U_t = [len(self.U)]
-        self.A = self.initial_infecteds[:] #Aware
+        self.A = tuple(self.initial_infecteds[:]) #Aware
         self.A_t = [len(self.A)]
 
     def set_infectivity(self, infectivity):
@@ -194,12 +194,10 @@ class MarkovModel():
         new_I = []
         new_U = []
         new_A = []
-        pool = mp.Pool(processes=mp.cpu_count())
         if len(self.I) > 0:
-            proc_queue = pool.map_async(self.run_process, nodes)
-            proc_queue.wait()
-            reasult = proc_queue.get()
-            for element in reasult:
+            with mp.Pool(processes=mp.cpu_count()) as pool:
+                results = pool.map(self.run_process, nodes)
+            for element in results:
                 if element[1][1] == 'S':
                     new_S.append(element[0])
                 else:
@@ -210,19 +208,20 @@ class MarkovModel():
                 else:
                     new_A.append(element[0])
 
-            self.S = new_S[:]
-            self.A = new_A[:]
-            self.I = new_I[:]
-            self.U = new_U[:]
+            self.S = tuple(new_S[:])
+            self.A = tuple(new_A[:])
+            self.I = tuple(new_I[:])
+            self.U = tuple(new_U[:])
             self.S_t.append(len(new_S))
             self.I_t.append(len(new_I))
             self.U_t.append(len(new_U))
             self.A_t.append(len(new_A))
         else:
-            self.S = nodes.copy()
-            self.A = []
-            self.I = []
-            self.U = nodes.copy()
+            print("Zero zainfekowanych")
+            self.S = tuple(nodes.copy())
+            self.A = tuple()
+            self.I = tuple()
+            self.U = tuple(nodes.copy())
             self.S_t.append(len(nodes))
             self.I_t.append(0)
             self.U_t.append(len(nodes))
@@ -270,28 +269,28 @@ if __name__ == "__main__":
     hidden_transition_prob = 0.6
     physical_transition_prob = 0.4
     factor = 1e-4
-    infectivity = 0.1
+    infectivity = 0
 
-    sim = MarkovModel(physical_layer, hidden_layer, hidden_transition_prob, physical_transition_prob,
-                                                    infectivity, factor, _lambda, rho=rho)
-    sim.run()
-    print(sim.I_t)
-    print(np.mean(np.array(sim.I_t)/nodes_number))
-
-
-    # i_probs = []
-    # a_probs = []
-    # infectivities = []
     # sim = MarkovModel(physical_layer, hidden_layer, hidden_transition_prob, physical_transition_prob,
     #                                                 infectivity, factor, _lambda, rho=rho)
-    # for infectivity in progressbar.progressbar(np.linspace(0, 1, 20)):
-    #     sim.set_infectivity(infectivity)
-    #     infectivities.append(infectivity)
-    #     sim.run()
-    #     i_probs.append(np.mean(sim.I_t)/nodes_number)
-    #     a_probs.append(np.mean(sim.A_t)/nodes_number)
-    #     sim.init_simulation()
-    # plt.plot(infectivities, i_probs)
-    # print(i_probs)
-    # plt.plot(infectivities, a_probs)
-    # plt.show()
+    # sim.run()
+    # print(sim.I_t)
+    # print(np.mean(np.array(sim.I_t)/nodes_number))
+
+
+    i_probs = []
+    a_probs = []
+    infectivities = []
+    sim = MarkovModel(physical_layer, hidden_layer, hidden_transition_prob, physical_transition_prob,
+                                                    infectivity, factor, _lambda, rho=rho)
+    for infectivity in progressbar.progressbar(np.linspace(0, 1, 20)):
+        sim.set_infectivity(infectivity)
+        infectivities.append(infectivity)
+        sim.run()
+        i_probs.append(np.mean(sim.I_t)/nodes_number)
+        a_probs.append(np.mean(sim.A_t)/nodes_number)
+        sim.init_simulation()
+    plt.plot(infectivities, i_probs)
+    print(i_probs)
+    plt.plot(infectivities, a_probs)
+    plt.show()
