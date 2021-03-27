@@ -238,37 +238,40 @@ class MarkovModel():
         else:
             return (node, 'AI')
 
-    def run_chain(self, nodes, processes):
+    def callback_function(self, reasult):
+        s_count = 0
+        i_count = 0
+        a_count = 0
+        u_count = 0
 
-        infected_nodes = list(filter(lambda x: x[1] == 'I', self.physical_nw.nodes(data='status')))
-        if len(infected_nodes) > 0:
-            s_count = 0
-            i_count = 0
-            a_count = 0
-            u_count = 0
+        for node, status in reasult:
+            if status[1] == 'S':
+                s_count = s_count + 1
+                self.physical_nw.nodes[node]['status'] = 'S'
+            else:
+                i_count = i_count + 1
+                self.physical_nw.nodes[node]['status'] = 'I'
 
-            with mp.Pool(processes=(mp.cpu_count() -2)) as pool:
-                result = pool.map(self.hidden_chain, nodes)
-
-            for node, status in result:
-                if status[1] == 'S':
-                    s_count = s_count + 1
-                    self.physical_nw.nodes[node]['status'] = 'S'
-                else:
-                    i_count = i_count + 1
-                    self.physical_nw.nodes[node]['status'] = 'I'
-
-                if status[0] == 'U':
-                    u_count = u_count + 1
-                    self.hidden_nw.nodes[node]['status'] = 'U'
-                else:
-                    a_count = a_count + 1
-                    self.hidden_nw.nodes[node]['status'] = 'A'
+            if status[0] == 'U':
+                u_count = u_count + 1
+                self.hidden_nw.nodes[node]['status'] = 'U'
+            else:
+                a_count = a_count + 1
+                self.hidden_nw.nodes[node]['status'] = 'A'
             
             self.S_t.append(s_count)
             self.I_t.append(i_count)
             self.U_t.append(u_count)
             self.A_t.append(a_count)
+
+    def run_chain(self, nodes, processes):
+
+        infected_nodes = list(filter(lambda x: x[1] == 'I', self.physical_nw.nodes(data='status')))
+        if len(infected_nodes) > 0:
+            with mp.Pool(processes=(mp.cpu_count() -2)) as pool:
+                result = pool.map_async(self.hidden_chain, nodes, chunksize=100, callback=self.callback_function)
+                result.wait()
+
         else:
             self.S_t.append(len(nodes))
             self.I_t.append(0)
