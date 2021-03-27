@@ -3,6 +3,7 @@ import progressbar
 import numpy as np
 import networkx as nx
 import matplotlib.pyplot as plt
+import multiprocessing as mp
 
 class MarkovModel():
 
@@ -39,7 +40,7 @@ class MarkovModel():
         return significand * 10**exp
 
     def init_simulation(self):
-        self.level_limit = 3
+        self.level_limit = 2
         np.random.seed(100)
         self.tmin = 0
         self.times = [self.tmin]
@@ -237,7 +238,7 @@ class MarkovModel():
         else:
             return (node, 'AI')
 
-    def run_chain(self, nodes):
+    def run_chain(self, nodes, processes):
 
         infected_nodes = list(filter(lambda x: x[1] == 'I', self.physical_nw.nodes(data='status')))
         if len(infected_nodes) > 0:
@@ -246,11 +247,10 @@ class MarkovModel():
             a_count = 0
             u_count = 0
 
-            reasult = []
-            for node in progressbar.progressbar(nodes):
-                reasult.append(self.hidden_chain(node))
+            with mp.Pool(processes=(mp.cpu_count() -2)) as pool:
+                result = pool.map(self.hidden_chain, nodes)
 
-            for node, status in reasult:
+            for node, status in result:
                 if status[1] == 'S':
                     s_count = s_count + 1
                     self.physical_nw.nodes[node]['status'] = 'S'
@@ -275,10 +275,10 @@ class MarkovModel():
             self.U_t.append(len(nodes))
             self.A_t.append(0)
 
-    def run(self):
+    def run(self, processes=None):
         all_nodes = list(self.physical_nw.nodes())
-        for i in range(self.tmin, self.tmax):
-            self.run_chain(all_nodes)
+        for i in  progressbar.progressbar(range(self.tmin, self.tmax)):
+            self.run_chain(all_nodes, processes)
             self.times.append(i)
 
 
@@ -322,7 +322,7 @@ if __name__ == "__main__":
     sim = MarkovModel(nodes_number, physical_layer, hidden_layer,
                       hidden_transition_prob, physical_transition_prob,
                       infectivity, factor, _lambda, rho=rho)
-    sim.run()
+    sim.run(processes=4)
     print(sim.I_t)
     print(np.mean(np.array(sim.I_t)/nodes_number))
 
