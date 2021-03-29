@@ -56,7 +56,7 @@ class MarkovModel:
         return significand * 10 ** exp
 
     def init_simulation(self):
-        self.level_limit = 3
+        self.level_limit = 2
         np.random.seed(100)
         self.tmin = 0
         self.times = [self.tmin]
@@ -512,7 +512,7 @@ def random_edge(graph):
 
 if __name__ == "__main__":
     nodes_number = 1000
-    physical_layer = nx.scale_free_graph(nodes_number)
+    physical_layer = nx.barabasi_albert_graph(1000, 25, seed=250)
     hidden_layer = physical_layer.copy()
     for i in range(400):
         hidden_layer = random_edge(hidden_layer)
