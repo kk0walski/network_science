@@ -258,6 +258,8 @@ class MarkovModel:
                     probability = probability * (
                         1 - probability_temp * self.infectivity_aware
                     )
+        if probability < 0:
+            probability = 0
         change_physical = np.random.choice(
             ["S", "I"], p=[probability, (1 - probability)]
         )
@@ -293,6 +295,8 @@ class MarkovModel:
                 probability_hidden = probability_hidden * (
                     1 - probability_temp * self._lambda
                 )
+        if probability_hidden < 0:
+            probability_hidden = 0
         change_hidden = np.random.choice(
             ["U", "A"], p=[probability_hidden, (1 - probability_hidden)]
         )
@@ -346,6 +350,8 @@ class MarkovModel:
                     probability_physical = probability_physical * (
                         1 - probability_temp * self.infectivity_aware
                     )
+        if probability_physical < 0:
+            probability_physical = 0
         change_physical = np.random.choice(
             ["S", "I"], p=[probability_physical, (1 - probability_physical)]
         )
@@ -492,7 +498,7 @@ if __name__ == "__main__":
     hidden_layer = physical_layer.copy()
     for i in range(400):
         hidden_layer = random_edge(hidden_layer)
-    _lambda = 0.8
+    _lambda = 1
     rho = 0.2
     hidden_transition_prob = 0.6
     physical_transition_prob = 0.4
