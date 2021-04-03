@@ -56,7 +56,7 @@ class MarkovModel:
         return significand * 10 ** exp
 
     def init_simulation(self):
-        self.level_limit = 2
+        self.level_limit = 1
         np.random.seed(100)
         self.tmin = 0
         self.times = [self.tmin]
@@ -106,11 +106,7 @@ class MarkovModel:
                         and self.hidden_nw.nodes[neighbour]["status"] == "A"
                     ):
                         prob_US = self.probability_US(level + 1, node, neighbour)
-                        probability_temp = (
-                            1
-                            - self.hidden_transition_prob
-                            + (1 - prob_US) * self.hidden_transition_prob
-                        )
+                        probability_temp = 1 - prob_US*self.hidden_transition_prob
                         probability_hidden = probability_hidden * (
                             1 - probability_temp * self._lambda
                         )
@@ -148,9 +144,7 @@ class MarkovModel:
                     ):
                         prob_AS = self.probability_AS(level + 1, node, neighbour)
                         prob_US = self.probability_US(level + 1, node, neighbour)
-                        probability_temp = (
-                            1 - self.hidden_transition_prob
-                        ) * prob_AS + self.hidden_transition_prob * prob_US
+                        probability_temp = 1 - prob_AS + self.hidden_transition_prob*(prob_AS - prob_US)
                         probability = probability * (
                             1 - probability_temp * self.infectivity_aware
                         )
@@ -158,9 +152,7 @@ class MarkovModel:
                         prob_US = self.probability_US(level + 1, node, neighbour)
                         prob_AS = self.probability_AS(level + 1, node, neighbour)
                         prob_r = self.r_prob(level + 1, node, neighbour)
-                        probability_temp = (1 - prob_r) * (1 - prob_AS) + prob_r * (
-                            1 - prob_US
-                        )
+                        probability_temp = 1 - prob_AS + prob_r*(prob_AS - prob_US)
                         probability = probability * (
                             1 - probability_temp * self.infectivity_aware
                         )
@@ -192,9 +184,7 @@ class MarkovModel:
                     ):
                         prob_AS = self.probability_AS(level + 1, node, neighbour)
                         prob_US = self.probability_US(level + 1, node, neighbour)
-                        probability_temp = (
-                            1 - self.hidden_transition_prob
-                        ) * prob_AS + self.hidden_transition_prob * prob_US
+                        probability_temp = 1 - prob_AS + self.hidden_transition_prob*(prob_AS - prob_US)
                         probability = probability * (
                             1 - probability_temp * self.infectivity_unaware
                         )
@@ -202,9 +192,7 @@ class MarkovModel:
                         prob_US = self.probability_US(level + 1, node, neighbour)
                         prob_AS = self.probability_AS(level + 1, node, neighbour)
                         prob_r = self.r_prob(level + 1, node, neighbour)
-                        probability_temp = (1 - prob_r) * (1 - prob_AS) + prob_r * (
-                            1 - prob_US
-                        )
+                        probability_temp = 1 - prob_AS + prob_r*(prob_AS - prob_US)
                         probability = probability * (
                             1 - probability_temp * self.infectivity_unaware
                         )
@@ -243,9 +231,7 @@ class MarkovModel:
                     prob_r = self.r_prob(0, node, neighbour)
                     prob_AS = self.probability_AS(0, node, neighbour)
                     prob_US = self.probability_US(0, node, neighbour)
-                    probability_temp = (1 - prob_r) * (1 - prob_AS) + prob_r * (
-                        1 - prob_US
-                    )
+                    probability_temp = 1 - prob_AS + prob_r*(prob_AS - prob_US)
                     probability = probability * (
                         1 - probability_temp * self.infectivity_unaware
                     )
@@ -268,9 +254,7 @@ class MarkovModel:
                     prob_r = self.r_prob(0, node, neighbour)
                     prob_AS = self.probability_AS(0, node, neighbour)
                     prob_US = self.probability_US(0, node, neighbour)
-                    probability_temp = (1 - prob_r) * (1 - prob_AS) + prob_r * (
-                        1 - prob_US
-                    )
+                    probability_temp = 1 - prob_AS + prob_r*(prob_AS - prob_US)
                     probability = probability * (
                         1 - probability_temp * self.infectivity_aware
                     )
@@ -297,12 +281,8 @@ class MarkovModel:
                 self.physical_nw.nodes[neighbour]["status"] == "S"
                 and self.hidden_nw.nodes[neighbour]["status"] == "A"
             ):
-                prob_AS = self.probability_AS(0, node, neighbour)
-                probability_temp = (
-                    1
-                    - self.hidden_transition_prob
-                    + (1 - prob_AS) * self.hidden_transition_prob
-                )
+                prob_US = self.probability_US(0, node, neighbour)
+                probability_temp = 1 - prob_US*self.hidden_transition_prob
                 probability_hidden = probability_hidden * (
                     1 - probability_temp * self._lambda
                 )
@@ -337,9 +317,7 @@ class MarkovModel:
                     prob_r = self.r_prob(0, node, neighbour)
                     prob_AS = self.probability_AS(0, node, neighbour)
                     prob_US = self.probability_US(0, node, neighbour)
-                    probability_temp = (1 - prob_r) * (1 - prob_AS) + prob_r * (
-                        1 - prob_US
-                    )
+                    probability_temp = 1 - prob_AS + prob_r*(prob_AS - prob_US)
                     probability_physical = probability_physical * (
                         1 - probability_temp * self.infectivity_unaware
                     )
@@ -364,9 +342,7 @@ class MarkovModel:
                     prob_r = self.r_prob(0, node, neighbour)
                     prob_AS = self.probability_AS(0, node, neighbour)
                     prob_US = self.probability_US(0, node, neighbour)
-                    probability_temp = (1 - prob_r) * (1 - prob_AS) + prob_r * (
-                        1 - prob_US
-                    )
+                    probability_temp = 1 - prob_AS + prob_r*(prob_AS - prob_US)
                     probability_physical = probability_physical * (
                         1 - probability_temp * self.infectivity_aware
                     )
@@ -516,7 +492,7 @@ if __name__ == "__main__":
     hidden_layer = physical_layer.copy()
     for i in range(400):
         hidden_layer = random_edge(hidden_layer)
-    _lambda = 0.15
+    _lambda = 0.8
     rho = 0.2
     hidden_transition_prob = 0.6
     physical_transition_prob = 0.4
