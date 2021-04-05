@@ -86,9 +86,13 @@ class MarkovModel:
 
     def set_physical_trans_prob(self, prob):
         self.physical_transition_prob = prob
+        self.probability_AI = 1 - self.physical_transition_prob
+        self.probability_A = (1 - self.physical_transition_prob * self.hidden_transition_prob)
     
     def set_hidden_trans_prob(self, prob):
         self.hidden_transition_prob = prob
+        self.probability_AI = 1 - self.physical_transition_prob
+        self.probability_A = (1 - self.physical_transition_prob * self.hidden_transition_prob)
 
     def markov_chain_AI(self):
         change_hidden = np.random.choice(
