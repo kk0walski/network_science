@@ -12,31 +12,16 @@ class MarkovModel:
         nodes_number,
         physical_layer,
         hidden_layer,
-        hidden_transition_prob,
-        physical_transition_prob,
-        infectivity,
-        factor,
-        _lambda,
         initial_infecteds=None,
         rho=None,
         tmin=0,
-        tmax=100,
+        tmax=30,
     ):
-
         self.nodes_number = nodes_number
         self.physical_nw = physical_layer
         self.hidden_nw = hidden_layer
-        self.physical_transition_prob = physical_transition_prob
-        self.hidden_transition_prob = hidden_transition_prob
-        self.infectivity_unaware = infectivity
-        self.infectivity_aware = factor * infectivity
-        self._lambda = _lambda
         self.tmin = tmin
         self.tmax = tmax
-        self.probability_AI = 1 - self.physical_transition_prob
-        self.probability_A = (
-            1 - self.physical_transition_prob * self.hidden_transition_prob
-        )
 
         if initial_infecteds is None:
             if rho is None:
@@ -48,7 +33,49 @@ class MarkovModel:
             )
         elif self.physical_nw.has_node(initial_infecteds):
             self.initial_infecteds = [initial_infecteds]
-        self.init_simulation()
+
+    # def __init__(
+    #     self,
+    #     nodes_number,
+    #     physical_layer,
+    #     hidden_layer,
+    #     hidden_transition_prob,
+    #     physical_transition_prob,
+    #     infectivity,
+    #     factor,
+    #     _lambda,
+    #     initial_infecteds=None,
+    #     rho=None,
+    #     tmin=0,
+    #     tmax=100,
+    # ):
+
+    #     self.nodes_number = nodes_number
+    #     self.physical_nw = physical_layer
+    #     self.hidden_nw = hidden_layer
+    #     self.physical_transition_prob = physical_transition_prob
+    #     self.hidden_transition_prob = hidden_transition_prob
+    #     self.infectivity_unaware = infectivity
+    #     self.infectivity_aware = factor * infectivity
+    #     self._lambda = _lambda
+    #     self.tmin = tmin
+    #     self.tmax = tmax
+    #     self.probability_AI = 1 - self.physical_transition_prob
+    #     self.probability_A = (
+    #         1 - self.physical_transition_prob * self.hidden_transition_prob
+    #     )
+
+    #     if initial_infecteds is None:
+    #         if rho is None:
+    #             self.initial_number = 1
+    #         else:
+    #             self.initial_number = int(round(self.physical_nw.order() * rho))
+    #         self.initial_infecteds = random.sample(
+    #             self.physical_nw.nodes(), self.initial_number
+    #         )
+    #     elif self.physical_nw.has_node(initial_infecteds):
+    #         self.initial_infecteds = [initial_infecteds]
+    #     self.init_simulation()
 
     def rnd(self):
         exp = np.random.randint(-20, -1)
@@ -56,7 +83,7 @@ class MarkovModel:
         return significand * 10 ** exp
 
     def init_simulation(self):
-        self.level_limit = 1
+        self.level_limit = 2
         np.random.seed(100)
         self.tmin = 0
         self.times = [self.tmin]
@@ -73,7 +100,7 @@ class MarkovModel:
 
     def set_infectivity(self, infectivity):
         self.infectivity_unaware = infectivity
-        self.infectivity_aware = factor * infectivity
+        self.infectivity_aware = self.factor * infectivity
     
     def set_lambda(self, _lambda):
         self._lambda = _lambda
@@ -87,12 +114,13 @@ class MarkovModel:
     def set_physical_trans_prob(self, prob):
         self.physical_transition_prob = prob
         self.probability_AI = 1 - self.physical_transition_prob
-        self.probability_A = (1 - self.physical_transition_prob * self.hidden_transition_prob)
     
     def set_hidden_trans_prob(self, prob):
         self.hidden_transition_prob = prob
-        self.probability_AI = 1 - self.physical_transition_prob
         self.probability_A = (1 - self.physical_transition_prob * self.hidden_transition_prob)
+
+    def set_factor(self, factor):
+        self.factor = factor
 
     def markov_chain_AI(self):
         change_hidden = np.random.choice(
@@ -513,7 +541,7 @@ def random_edge(graph):
 
 if __name__ == "__main__":
     nodes_number = 1000
-    physical_layer = nx.barabasi_albert_graph(1000, 25, seed=250)
+    physical_layer = nx.barabasi_albert_graph(nodes_number, 10)
     hidden_layer = physical_layer.copy()
     for i in range(400):
         hidden_layer = random_edge(hidden_layer)
@@ -524,36 +552,36 @@ if __name__ == "__main__":
     factor = 1e-3
     infectivity = 0.1
 
-    # sim = MarkovModel(
-    #     nodes_number,
-    #     physical_layer,
-    #     hidden_layer,
-    #     hidden_transition_prob,
-    #     physical_transition_prob,
-    #     infectivity,
-    #     factor,
-    #     _lambda,
-    #     rho=rho,
-    # )
-    # sim.run(processes=4)
-    # print(sim.I_t)
-    # print(np.mean(np.array(sim.I_t) / nodes_number))
+    sim = MarkovModel(
+        nodes_number,
+        physical_layer,
+        hidden_layer,
+        hidden_transition_prob,
+        physical_transition_prob,
+        infectivity,
+        factor,
+        _lambda,
+        rho=rho,
+    )
+    sim.run(processes=4)
+    print(sim.I_t)
+    print(np.mean(np.array(sim.I_t) / nodes_number))
 
-    i_probs = []
-    a_probs = []
-    infectivities = []
-    sim = MarkovModel(nodes_number, physical_layer, hidden_layer,
-                    hidden_transition_prob, physical_transition_prob,
-                    infectivity, factor, _lambda, rho=rho)
+    # i_probs = []
+    # a_probs = []
+    # infectivities = []
+    # sim = MarkovModel(nodes_number, physical_layer, hidden_layer,
+    #                 hidden_transition_prob, physical_transition_prob,
+    #                 infectivity, factor, _lambda, rho=rho)
 
-    for infectivity in np.linspace(0, 1, 20):
-        sim.set_infectivity(infectivity)
-        infectivities.append(infectivity)
-        sim.run()
-        i_probs.append(np.mean(sim.I_t)/nodes_number)
-        a_probs.append(np.mean(sim.A_t)/nodes_number)
-        sim.init_simulation()
-    plt.plot(infectivities, i_probs)
-    print(i_probs)
-    plt.plot(infectivities, a_probs)
-    plt.show()
+    # for infectivity in np.linspace(0, 1, 20):
+    #     sim.set_infectivity(infectivity)
+    #     infectivities.append(infectivity)
+    #     sim.run()
+    #     i_probs.append(np.mean(sim.I_t)/nodes_number)
+    #     a_probs.append(np.mean(sim.A_t)/nodes_number)
+    #     sim.init_simulation()
+    # plt.plot(infectivities, i_probs)
+    # print(i_probs)
+    # plt.plot(infectivities, a_probs)
+    # plt.show()
