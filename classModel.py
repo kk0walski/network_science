@@ -222,7 +222,7 @@ class MarkovModel:
                                 1 - self.probability_AI * self.infectivity_unaware
                             )
                         else:
-                             prob_AS = self.probability_AS(level + 1, node, neighbour)
+                            prob_AS = self.probability_AS(level + 1, node, neighbour)
                             prob_US = self.probability_US(level + 1, node, neighbour)
                             probability_temp = (
                                 1
