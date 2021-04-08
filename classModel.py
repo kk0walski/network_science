@@ -7,63 +7,21 @@ import multiprocessing as mp
 
 
 class MarkovModel:
-    def __init__(
-        self,
-        nodes_number,
-        physical_layer,
-        hidden_layer,
-        initial_infecteds=None,
-        rho=None,
-        tmin=0,
-        tmax=30,
-    ):
-        self.nodes_number = nodes_number
-        self.physical_nw = physical_layer
-        self.hidden_nw = hidden_layer
-        self.tmin = tmin
-        self.tmax = tmax
-
-        if initial_infecteds is None:
-            if rho is None:
-                self.initial_number = 1
-            else:
-                self.initial_number = int(round(self.physical_nw.order() * rho))
-            self.initial_infecteds = random.sample(
-                self.physical_nw.nodes(), self.initial_number
-            )
-        elif self.physical_nw.has_node(initial_infecteds):
-            self.initial_infecteds = [initial_infecteds]
-
     # def __init__(
     #     self,
     #     nodes_number,
     #     physical_layer,
     #     hidden_layer,
-    #     hidden_transition_prob,
-    #     physical_transition_prob,
-    #     infectivity,
-    #     factor,
-    #     _lambda,
     #     initial_infecteds=None,
     #     rho=None,
     #     tmin=0,
-    #     tmax=100,
+    #     tmax=30,
     # ):
-
     #     self.nodes_number = nodes_number
     #     self.physical_nw = physical_layer
     #     self.hidden_nw = hidden_layer
-    #     self.physical_transition_prob = physical_transition_prob
-    #     self.hidden_transition_prob = hidden_transition_prob
-    #     self.infectivity_unaware = infectivity
-    #     self.infectivity_aware = factor * infectivity
-    #     self._lambda = _lambda
     #     self.tmin = tmin
     #     self.tmax = tmax
-    #     self.probability_AI = 1 - self.physical_transition_prob
-    #     self.probability_A = (
-    #         1 - self.physical_transition_prob * self.hidden_transition_prob
-    #     )
 
     #     if initial_infecteds is None:
     #         if rho is None:
@@ -75,7 +33,51 @@ class MarkovModel:
     #         )
     #     elif self.physical_nw.has_node(initial_infecteds):
     #         self.initial_infecteds = [initial_infecteds]
-    #     self.init_simulation()
+
+    def __init__(
+        self,
+        nodes_number,
+        physical_layer,
+        hidden_layer,
+        hidden_transition_prob,
+        physical_transition_prob,
+        infectivity,
+        factor,
+        _lambda,
+        initial_infecteds=None,
+        rho=None,
+        level_limit=2,
+        tmin=0,
+        tmax=100,
+    ):
+
+        self.nodes_number = nodes_number
+        self.physical_nw = physical_layer
+        self.hidden_nw = hidden_layer
+        self.physical_transition_prob = physical_transition_prob
+        self.hidden_transition_prob = hidden_transition_prob
+        self.infectivity_unaware = infectivity
+        self.infectivity_aware = factor * infectivity
+        self._lambda = _lambda
+        self.tmin = tmin
+        self.tmax = tmax
+        self.probability_AI = 1 - self.physical_transition_prob
+        self.level_limit = level_limit
+        self.probability_A = (
+            1 - self.physical_transition_prob * self.hidden_transition_prob
+        )
+
+        if initial_infecteds is None:
+            if rho is None:
+                self.initial_number = 1
+            else:
+                self.initial_number = int(round(self.physical_nw.order() * rho))
+            self.initial_infecteds = random.sample(
+                self.physical_nw.nodes(), self.initial_number
+            )
+        elif self.physical_nw.has_node(initial_infecteds):
+            self.initial_infecteds = [initial_infecteds]
+        self.init_simulation()
 
     def rnd(self):
         exp = np.random.randint(-20, -1)
@@ -135,10 +137,7 @@ class MarkovModel:
             ["S", "I"],
             p=[self.physical_transition_prob, (1 - self.physical_transition_prob)],
         )
-        if change_hidden == "U" and change_physical == "I":
-            return "AI"
-        else:
-            return change_hidden + change_physical
+        return change_hidden, change_physical
 
     def r_prob(self, level, parent, node):
         probability_hidden = 1
@@ -251,16 +250,13 @@ class MarkovModel:
             return _sum
 
     def markov_chain_AS(self, node):
-        change_hidden = np.random.choice(
-            ["U", "A"],
+        hidden_states = [("U", self.infectivity_unaware), ("A", self.infectivity_aware)]
+        status_index = np.random.choice(
+            2,
             p=[self.hidden_transition_prob, (1 - self.hidden_transition_prob)],
         )
         probability = 1
-
-        if change_hidden == "U":
-            chosen_infectivity = self.infectivity_unaware
-        else:
-            chosen_infectivity = self.infectivity_aware
+        chosen_infectivity = hidden_states[status_index][1]
 
         for neighbour in self.physical_nw.neighbors(node):
             if self.hidden_nw.nodes[neighbour]["status"] == "A":
@@ -283,10 +279,7 @@ class MarkovModel:
         change_physical = np.random.choice(
             ["S", "I"], p=[probability, (1 - probability)]
         )
-        if change_hidden == "U" and change_physical == "I":
-            return "AI"
-        else:
-            return change_hidden + change_physical
+        return hidden_states[status_index][0], change_physical
 
     def markov_chain_US(self, node):
         probability_hidden = 1
@@ -313,14 +306,14 @@ class MarkovModel:
 
         if probability_hidden < 0:
             probability_hidden = 0
-        change_hidden = np.random.choice(
-            ["U", "A"], p=[probability_hidden, (1 - probability_hidden)]
+
+        hidden_states = [("U", self.infectivity_unaware), ("A", self.infectivity_aware)]
+        status_index = np.random.choice(
+            2,
+            p=[self.hidden_transition_prob, (1 - self.hidden_transition_prob)],
         )
 
-        if change_hidden == "U":
-            chosen_infectivity = self.infectivity_unaware
-        else:
-            chosen_infectivity = self.infectivity_aware
+        chosen_infectivity = hidden_states[status_index][1]
 
         for neighbour in self.physical_nw.neighbors(node):
             if self.hidden_nw.nodes[neighbour]["status"] == "A":
@@ -348,29 +341,25 @@ class MarkovModel:
         change_physical = np.random.choice(
             ["S", "I"], p=[probability_physical, (1 - probability_physical)]
         )
-        if change_hidden == "U" and change_physical == "I":
-            return "AI"
-        else:
-            return change_hidden + change_physical
+        return hidden_states[status_index][0], change_physical
 
     def hidden_chain(self, node):
-        if (
-            self.physical_nw.nodes[node]["status"] == "I"
-            and self.hidden_nw.nodes[node]["status"] == "A"
-        ):
-            return (node, self.markov_chain_AI())
-        elif (
-            self.physical_nw.nodes[node]["status"] == "S"
-            and self.hidden_nw.nodes[node]["status"] == "A"
-        ):
-            return (node, self.markov_chain_AS(node))
-        elif (
-            self.physical_nw.nodes[node]["status"] == "S"
-            and self.hidden_nw.nodes[node]["status"] == "U"
-        ):
-            return (node, self.markov_chain_US(node))
+        physical_status = self.physical_nw.nodes[node]["status"]
+        hidden_status = self.hidden_nw.nodes[node]["status"]
+        if hidden_status == "A":
+            if physical_status == "S":
+                hidden_status, physical_status = self.markov_chain_AS(node)
+            else:
+                hidden_status, physical_status = self.markov_chain_AI()
         else:
-            return (node, "AI")
+            if physical_status == "S":
+                hidden_status, physical_status = self.markov_chain_US(node)
+            else:
+                hidden_status, physical_status = "A", "I"
+
+        if hidden_status == "U" and physical_status == "I":
+            return node, "A", "I"
+        return node, hidden_status, physical_status
 
     def filter_node_rec(self, level, node):
         if self.hidden_nw.nodes[node]["status"] == "A":
@@ -408,10 +397,7 @@ class MarkovModel:
             filter(lambda x: self.physical_nw.nodes[x]["status"] == "I", aware_nodes)
         )
         if len(infected_nodes) > 0:
-            s_count = 0
-            i_count = 0
-            a_count = 0
-            u_count = 0
+            status_counts = {"S": 0, "I": 0, "A": 0, "U": 0}
 
             unaware_nodes = self.hidden_nw.nodes() - aware_nodes
 
@@ -425,27 +411,18 @@ class MarkovModel:
                 rest_number = nodes_number - len(filtered_unaware) - len(aware_nodes)
                 exam_nodes = filtered_unaware + aware_nodes
 
-                for node, status in pool.imap_unordered(
+                for node, hidden_status, physical_status in pool.imap_unordered(
                     self.hidden_chain, exam_nodes, chunksize=10
                 ):
-                    if status[1] == "S":
-                        s_count = s_count + 1
-                        self.physical_nw.nodes[node]["status"] = "S"
-                    else:
-                        i_count = i_count + 1
-                        self.physical_nw.nodes[node]["status"] = "I"
+                    status_counts[hidden_status] = status_counts[hidden_status] + 1
+                    self.physical_nw.nodes[node]["status"] = physical_status
+                    status_counts[physical_status] = status_counts[physical_status] + 1
+                    self.hidden_nw.nodes[node]["status"] = hidden_status
 
-                    if status[0] == "U":
-                        u_count = u_count + 1
-                        self.hidden_nw.nodes[node]["status"] = "U"
-                    else:
-                        a_count = a_count + 1
-                        self.hidden_nw.nodes[node]["status"] = "A"
-
-                self.S_t.append(s_count + rest_number)
-                self.I_t.append(i_count)
-                self.U_t.append(u_count + rest_number)
-                self.A_t.append(a_count)
+                self.S_t.append(status_counts["S"] + rest_number)
+                self.I_t.append(status_counts["I"])
+                self.U_t.append(status_counts["U"] + rest_number)
+                self.A_t.append(status_counts["A"])
         else:
             self.S_t.append(len(nodes))
             self.I_t.append(0)
