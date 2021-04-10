@@ -1,4 +1,5 @@
 import random
+import progressbar
 import numpy as np
 import networkx as nx
 import multiprocessing as mp
@@ -25,7 +26,7 @@ class MarkovModel:
             if rho is None:
                 self.initial_number = 1
             else:
-                self.initial_number = int(round(len(list(network.keys() * rho))
+                self.initial_number = int(round(len(list(network.keys())) * rho))
             self.initial_infecteds = random.sample(
                 list(network.keys()), self.initial_number
             )
@@ -44,9 +45,8 @@ class MarkovModel:
         np.random.seed(100)
         self.tmin = 0
         self.times = [self.tmin]
-        self.statuses = defaultdict(self.default_value)
         for node in self.initial_infecteds:
-            self.network[node]["hiddent_status"] = "A"
+            self.network[node]["hidden_status"] = "A"
             self.network[node]["physical_status"] = "I"
 
         self.S_t = [self.nodes_number - len(self.initial_infecteds)]
@@ -91,9 +91,9 @@ class MarkovModel:
     def r_prob(self, level, parent, node):
         probability_hidden = 1
         if level < self.level_limit:
-            for neighbour in self.network[node]['hidden']
+            for neighbour in self.network[node]['hidden']:
                 if neighbour != parent:
-                    if self.network[node]['hiddent_status'] == "A":
+                    if self.network[node]['hidden_status'] == "A":
                         if self.network[node]['physical_status'] == "I":
                             probability_hidden = probability_hidden * (
                                 1 - self.probability_A * self._lambda
@@ -125,7 +125,7 @@ class MarkovModel:
         if level < self.level_limit:
             for neighbour in self.network[node]['physical']:
                 if neighbour != parent:
-                    if self.network[node]['hiddent_status'] == "A":
+                    if self.network[node]['hidden_status'] == "A":
                         if self.network[node]['physical_status'] == "I":
                             probability = probability * (
                                 1 - self.probability_AI * self.infectivity_aware
@@ -164,7 +164,7 @@ class MarkovModel:
         if level < self.level_limit:
             for neighbour in self.network[node]['physical']:
                 if neighbour != parent:
-                    if self.network[node]['hiddent_status'] == "A":
+                    if self.network[node]['hidden_status'] == "A":
                         if self.network[node]['physical_status'] == "I":
                             probability = probability * (
                                 1 - self.probability_AI * self.infectivity_unaware
@@ -209,7 +209,7 @@ class MarkovModel:
         chosen_infectivity = hidden_states[status_index][1]
 
         for neighbour in self.network[node]['physical']:
-            if self.network[node]['hiddent_status'] == "A":
+            if self.network[node]['hidden_status'] == "A":
                 if self.network[node]['physical_status'] == "I":
                     probability = probability * (
                         1 - self.probability_AI * chosen_infectivity
@@ -235,7 +235,7 @@ class MarkovModel:
         probability_hidden = 1
         probability_physical = 1
         for neighbour in self.network[node]['hidden']:
-            if self.network[node]['hiddent_status'] == "A":
+            if self.network[node]['hidden_status'] == "A":
                 if self.network[node]['physical_status'] == "I":
                     probability_hidden = probability_hidden * (
                         1 - self.probability_A * self._lambda
@@ -266,7 +266,7 @@ class MarkovModel:
         chosen_infectivity = hidden_states[status_index][1]
 
         for neighbour in self.network[node]['physical']:
-            if self.network[node]['hiddent_status'] == "A":
+            if self.network[node]['hidden_status'] == "A":
                 if self.network[node]['physical_status'] == "I":
                     probability_physical = probability_physical * (
                         1 - self.probability_AI * chosen_infectivity
@@ -295,7 +295,7 @@ class MarkovModel:
 
     def hidden_chain(self, node):
         physical_status = self.network[node]['physical_status']
-        hidden_status = self.network[node]['hiddent_status']
+        hidden_status = self.network[node]['hidden_status']
         if hidden_status == "A":
             if physical_status == "S":
                 hidden_status, physical_status = self.markov_chain_AS(node)
@@ -312,7 +312,7 @@ class MarkovModel:
         return node, hidden_status, physical_status
 
     def filter_node_rec(self, level, node):
-        if self.network[node]['hiddent_status'] == "A":
+        if self.network[node]['hidden_status'] == "A":
             return True
         elif level == self.level_limit:
             return False
@@ -320,7 +320,7 @@ class MarkovModel:
             boolean_status = list(
                 map(
                     lambda neighbour: self.filter_node_rec(level + 1, neighbour),
-                    list(self.network[node]'hidden']),
+                    list(self.network[node]['hidden']),
                 )
             )
             if len(boolean_status) == 0:
@@ -329,7 +329,7 @@ class MarkovModel:
                 return max(boolean_status)
 
     def filter_node(self, node):
-        if self.network[node]['hiddent_status'] == "A":
+        if self.network[node]['hidden_status'] == "A":
             return (node, True)
         else:
             return (node, self.filter_node_rec(0, node))
@@ -337,13 +337,13 @@ class MarkovModel:
 
     def run_chain(self, nodes, processes, nodes_number=1000):
         
-        aware_nodes = [k for k, v in self.network.items() if v['hiddent_status'] == "A"]
+        aware_nodes = [k for k, v in self.network.items() if v['hidden_status'] == "A"]
         infected_nodes = [k for k, v in self.network.items() if v['physical_status'] == "I"]
 
         if len(infected_nodes) > 0:
             status_counts = {"S": 0, "I": 0, "A": 0, "U": 0}
 
-            unaware_nodes = list(set(range(nodes_number))) - set(aware_nodes))
+            unaware_nodes = list(set(range(nodes_number)) - set(aware_nodes))
 
             with mp.Pool(processes=(10)) as pool:
                 filtered_unaware = []
@@ -383,23 +383,11 @@ class MarkovModel:
 def multiplex_network(nodes_number, physical_network, hidden_network):
     
     layer_network = {}
-    physical_dict = nx.to_dict_of_lists(physical_layer)
-    hidden_dict = nx.to_dict_of_lists(hidden_layer)
+    physical_dict = nx.to_dict_of_lists(physical_network)
+    hidden_dict = nx.to_dict_of_lists(hidden_network)
     for node in range(nodes_number):
         layer_network[node] = {'hidden_status': 'U', 'hidden': hidden_dict[node],
                             'physical_status': 'S', 'physical': physical_dict[node]}
-
-    if initial_infecteds is None:
-        if rho is None:
-            initial_number = 1
-        else:
-            initial_number = int(round(nodes_number*rho))
-        initial_infecteds = random.sample(range(nodes_number), initial_number)
-    
-    for i in initial_infecteds:
-        if i < nodes_number:
-            layer_network[node]['physical_status'] = 'I'
-            layer_network[node]['hidden_status'] = 'A'
 
     return layer_network
 
