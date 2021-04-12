@@ -18,7 +18,8 @@ class MarkovModel:
     ):
 
         self.nodes_number = nodes_number
-        self.network = network
+        self.original_network = network
+        self.network = network.copy()
         self.tmin = tmin
         self.tmax = tmax
 
@@ -45,6 +46,7 @@ class MarkovModel:
         np.random.seed(100)
         self.tmin = 0
         self.times = [self.tmin]
+        self.network = self.original_network.copy()
         for node in self.initial_infecteds:
             self.network[node]["hidden_status"] = "A"
             self.network[node]["physical_status"] = "I"
@@ -93,8 +95,9 @@ class MarkovModel:
         if level < self.level_limit:
             for neighbour in self.network[node]['hidden']:
                 if neighbour != parent:
-                    if self.network[node]['hidden_status'] == "A":
-                        if self.network[node]['physical_status'] == "I":
+                    temp_node = self.network[neighbour]
+                    if temp_node['hidden_status'] == "A":
+                        if temp_node['physical_status'] == "I":
                             probability_hidden = probability_hidden * (
                                 1 - self.probability_A * self._lambda
                             )
@@ -125,8 +128,9 @@ class MarkovModel:
         if level < self.level_limit:
             for neighbour in self.network[node]['physical']:
                 if neighbour != parent:
-                    if self.network[node]['hidden_status'] == "A":
-                        if self.network[node]['physical_status'] == "I":
+                    temp_node = self.network[neighbour]
+                    if temp_node['hidden_status'] == "A":
+                        if temp_node['physical_status'] == "I":
                             probability = probability * (
                                 1 - self.probability_AI * self.infectivity_aware
                             )
@@ -164,8 +168,9 @@ class MarkovModel:
         if level < self.level_limit:
             for neighbour in self.network[node]['physical']:
                 if neighbour != parent:
-                    if self.network[node]['hidden_status'] == "A":
-                        if self.network[node]['physical_status'] == "I":
+                    temp_node = self.network[neighbour]
+                    if temp_node['hidden_status'] == "A":
+                        if temp_node['physical_status'] == "I":
                             probability = probability * (
                                 1 - self.probability_AI * self.infectivity_unaware
                             )
@@ -209,8 +214,9 @@ class MarkovModel:
         chosen_infectivity = hidden_states[status_index][1]
 
         for neighbour in self.network[node]['physical']:
-            if self.network[node]['hidden_status'] == "A":
-                if self.network[node]['physical_status'] == "I":
+            temp_node = self.network[neighbour]
+            if temp_node['hidden_status'] == "A":
+                if temp_node['physical_status'] == "I":
                     probability = probability * (
                         1 - self.probability_AI * chosen_infectivity
                     )
@@ -235,8 +241,9 @@ class MarkovModel:
         probability_hidden = 1
         probability_physical = 1
         for neighbour in self.network[node]['hidden']:
-            if self.network[node]['hidden_status'] == "A":
-                if self.network[node]['physical_status'] == "I":
+            temp_node = self.network[neighbour]
+            if temp_node['hidden_status'] == "A":
+                if temp_node['physical_status'] == "I":
                     probability_hidden = probability_hidden * (
                         1 - self.probability_A * self._lambda
                     )
@@ -266,8 +273,9 @@ class MarkovModel:
         chosen_infectivity = hidden_states[status_index][1]
 
         for neighbour in self.network[node]['physical']:
-            if self.network[node]['hidden_status'] == "A":
-                if self.network[node]['physical_status'] == "I":
+            temp_node = self.network[neighbour]
+            if temp_node['hidden_status'] == "A":
+                if temp_node['physical_status'] == "I":
                     probability_physical = probability_physical * (
                         1 - self.probability_AI * chosen_infectivity
                     )
