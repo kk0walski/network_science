@@ -19,7 +19,7 @@ class MarkovModel:
 
         self.nodes_number = nodes_number
         self.original_network = network
-        self.network = network.copy()
+        self.network = {}
         self.tmin = tmin
         self.tmax = tmax
 
@@ -34,6 +34,12 @@ class MarkovModel:
         elif min([infected in network[node]['physical'] for infected in initial_infecteds]):
             self.initial_infecteds = [initial_infecteds]
 
+        self.init_A = self.nodes_number - len(self.initial_infecteds)
+        self
+        for node in self.initial_infecteds:
+            self.original_network[node]["hidden_status"] = "A"
+            self.original_network[node]["physical_status"] = "I"
+
     def rnd(self):
         exp = np.random.randint(-5, -1)
         significand = 0.9 * np.random.random() + 0.1
@@ -47,9 +53,6 @@ class MarkovModel:
         self.tmin = 0
         self.times = [self.tmin]
         self.network = self.original_network.copy()
-        for node in self.initial_infecteds:
-            self.network[node]["hidden_status"] = "A"
-            self.network[node]["physical_status"] = "I"
 
         self.S_t = [self.nodes_number - len(self.initial_infecteds)]
         self.U_t = [self.nodes_number - len(self.initial_infecteds)]
@@ -384,7 +387,7 @@ class MarkovModel:
 
     def run(self, processes=None):
         all_nodes = list(self.network.keys())
-        for i in progressbar.progressbar(range(self.tmin, self.tmax)):
+        for i in range(self.tmin, self.tmax):
             self.run_chain(all_nodes, processes, len(all_nodes))
             self.times.append(i)
 
