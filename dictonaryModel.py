@@ -1,3 +1,4 @@
+import copy
 import random
 import progressbar
 import numpy as np
@@ -52,7 +53,7 @@ class MarkovModel:
         np.random.seed(100)
         self.tmin = 0
         self.times = [self.tmin]
-        self.network = self.original_network.copy()
+        self.network = copy.deepcopy(self.original_network)
         self.S_t = [self.init_S]
         self.U_t = [self.init_S]
         self.A_t = [self.init_A]
