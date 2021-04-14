@@ -297,15 +297,13 @@ class MarkovModel:
         return hidden_states[status_index][0], change_physical
 
     def hidden_chain(self, node):
-        physical_status = self.network[node]['physical_status']
-        hidden_status = self.network[node]['hidden_status']
-        if hidden_status == "A":
-            if physical_status == "S":
+        if self.hidden_status[node] == "A":
+            if self.physical_status[node] == "S":
                 hidden_status, physical_status = self.markov_chain_AS(node)
             else:
                 hidden_status, physical_status = self.markov_chain_AI()
         else:
-            if physical_status == "S":
+            if self.physical_status[node] == "S":
                 hidden_status, physical_status = self.markov_chain_US(node)
             else:
                 hidden_status, physical_status = "A", "I"
@@ -315,7 +313,7 @@ class MarkovModel:
         return node, hidden_status, physical_status
 
     def filter_node_rec(self, level, node):
-        if self.network[node]['hidden_status'] == "A":
+        if self.hidden_status[node] == "A":
             return True
         elif level == self.level_limit:
             return False
@@ -332,21 +330,20 @@ class MarkovModel:
                 return max(boolean_status)
 
     def filter_node(self, node):
-        if self.network[node]['hidden_status'] == "A":
+        if self.hidden_status[node] == "A":
             return (node, True)
         else:
             return (node, self.filter_node_rec(0, node))
 
 
     def run_chain(self, nodes, processes, nodes_number=1000):
-        
-        aware_nodes = [k for k, v in self.network.items() if v['hidden_status'] == "A"]
-        infected_nodes = [k for k, v in self.network.items() if v['physical_status'] == "I"]
+        infected_nodes = np.where(self.physical_status == "I")
 
         if len(infected_nodes) > 0:
             status_counts = {"S": 0, "I": 0, "A": 0, "U": 0}
-
-            unaware_nodes = list(set(range(nodes_number)) - set(aware_nodes))
+            
+            aware_nodes = np.where(self.hidden_status == "A")
+            unaware_nodes = np.where(self.hidden_status == "U")
             with mp.Pool(processes=(10)) as filtering:
                 filtered_unaware = []
                 for node, to_process in filtering.imap_unordered(
@@ -356,7 +353,7 @@ class MarkovModel:
                         filtered_unaware.append(node)
 
             rest_number = nodes_number - len(filtered_unaware) - len(aware_nodes)
-            exam_nodes = filtered_unaware + aware_nodes
+            exam_nodes = np.append(filtered_unaware, aware_nodes)
 
             with mp.Pool(processes=(10)) as pool:
                 for node, hidden_status, physical_status in pool.imap_unordered(
