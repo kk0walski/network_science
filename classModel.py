@@ -401,16 +401,18 @@ class MarkovModel:
 
             unaware_nodes = self.hidden_nw.nodes() - aware_nodes
 
-            with mp.Pool(processes=(10)) as pool:
+            with mp.Pool(processes=(10)) as filtering:
                 filtered_unaware = []
-                for node, to_process in pool.imap_unordered(
+                for node, to_process in filtering.imap_unordered(
                     self.filter_node, unaware_nodes, chunksize=5
                 ):
                     if to_process:
                         filtered_unaware.append(node)
-                rest_number = nodes_number - len(filtered_unaware) - len(aware_nodes)
-                exam_nodes = filtered_unaware + aware_nodes
 
+            rest_number = nodes_number - len(filtered_unaware) - len(aware_nodes)
+            exam_nodes = filtered_unaware + aware_nodes
+
+            with mp.Pool(processes=(10)) as pool:
                 for node, hidden_status, physical_status in pool.imap_unordered(
                     self.hidden_chain, exam_nodes, chunksize=10
                 ):
@@ -419,10 +421,10 @@ class MarkovModel:
                     status_counts[physical_status] = status_counts[physical_status] + 1
                     self.hidden_nw.nodes[node]["status"] = hidden_status
 
-                self.S_t.append(status_counts["S"] + rest_number)
-                self.I_t.append(status_counts["I"])
-                self.U_t.append(status_counts["U"] + rest_number)
-                self.A_t.append(status_counts["A"])
+            self.S_t.append(status_counts["S"] + rest_number)
+            self.I_t.append(status_counts["I"])
+            self.U_t.append(status_counts["U"] + rest_number)
+            self.A_t.append(status_counts["A"])
         else:
             self.S_t.append(len(nodes))
             self.I_t.append(0)
@@ -431,7 +433,7 @@ class MarkovModel:
 
     def run(self, processes=None):
         all_nodes = list(self.physical_nw.nodes())
-        for i in progressbar.progressbar(range(self.tmin, self.tmax)):
+        for i in range(self.tmin, self.tmax):
             self.run_chain(all_nodes, processes, len(all_nodes))
             self.times.append(i)
 

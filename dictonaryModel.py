@@ -34,8 +34,8 @@ class MarkovModel:
         elif min([infected in network[node]['physical'] for infected in initial_infecteds]):
             self.initial_infecteds = [initial_infecteds]
 
-        self.init_A = self.nodes_number - len(self.initial_infecteds)
-        self
+        self.init_S = self.nodes_number - len(self.initial_infecteds)
+        self.init_A =  len(self.initial_infecteds)
         for node in self.initial_infecteds:
             self.original_network[node]["hidden_status"] = "A"
             self.original_network[node]["physical_status"] = "I"
@@ -53,11 +53,10 @@ class MarkovModel:
         self.tmin = 0
         self.times = [self.tmin]
         self.network = self.original_network.copy()
-
-        self.S_t = [self.nodes_number - len(self.initial_infecteds)]
-        self.U_t = [self.nodes_number - len(self.initial_infecteds)]
-        self.A_t = [len(self.initial_infecteds)]
-        self.I_t = [len(self.initial_infecteds)]
+        self.S_t = [self.init_S]
+        self.U_t = [self.init_S]
+        self.A_t = [self.init_A]
+        self.I_t = [self.init_A]
 
     def set_infectivity(self, infectivity):
         self.infectivity_unaware = infectivity
@@ -355,18 +354,18 @@ class MarkovModel:
             status_counts = {"S": 0, "I": 0, "A": 0, "U": 0}
 
             unaware_nodes = list(set(range(nodes_number)) - set(aware_nodes))
-
-            with mp.Pool(processes=(10)) as pool:
+            with mp.Pool(processes=(10)) as filtering:
                 filtered_unaware = []
-                for node, to_process in pool.imap_unordered(
+                for node, to_process in filtering.imap_unordered(
                     self.filter_node, unaware_nodes, chunksize=5
                 ):
                     if to_process:
                         filtered_unaware.append(node)
 
-                rest_number = nodes_number - len(filtered_unaware) - len(aware_nodes)
-                exam_nodes = filtered_unaware + aware_nodes
+            rest_number = nodes_number - len(filtered_unaware) - len(aware_nodes)
+            exam_nodes = filtered_unaware + aware_nodes
 
+            with mp.Pool(processes=(10)) as pool:
                 for node, hidden_status, physical_status in pool.imap_unordered(
                     self.hidden_chain, exam_nodes, chunksize=10
                 ):
@@ -375,10 +374,10 @@ class MarkovModel:
                     status_counts[physical_status] = status_counts[physical_status] + 1
                     self.network[node]['hidden_status'] = hidden_status
 
-                self.S_t.append(status_counts["S"] + rest_number)
-                self.I_t.append(status_counts["I"])
-                self.U_t.append(status_counts["U"] + rest_number)
-                self.A_t.append(status_counts["A"])
+            self.S_t.append(status_counts["S"] + rest_number)
+            self.I_t.append(status_counts["I"])
+            self.U_t.append(status_counts["U"] + rest_number)
+            self.A_t.append(status_counts["A"])
         else:
             self.S_t.append(len(nodes))
             self.I_t.append(0)
@@ -413,17 +412,28 @@ def random_edge(graph):
     return graph
 
 if __name__ == "__main__":
-    nodes_number = 1000
-    physical_layer = nx.barabasi_albert_graph(nodes_number, 10)
+    nodes_number = 100
+    physical_layer = nx.barabasi_albert_graph(nodes_number, 5)
     hidden_layer = physical_layer.copy()
     for i in range(400):
         hidden_layer = random_edge(hidden_layer)
-    multiplex_network = multiplex_network(nodes_number, physical_layer, hidden_layer)
+    network = multiplex_network(nodes_number, physical_layer, hidden_layer)
 
-    _lambda = 1
+    _lambda = 0.2
     rho = 0.2
-    hidden_transition_prob = 0.6
-    physical_transition_prob = 0.4
-    factor = 1e-3
+    hidden_transition_prob = 0.25
+    physical_transition_prob = 0.25
+    factor = 0.01
     level_limit = 2
-    infectivity = 0.1
+    infectivity = 0.0
+    model = MarkovModel(nodes_number, network,  rho=0.2)
+    model.set_level(2)
+    model.set_factor(factor)
+    model.set_physical_trans_prob(physical_transition_prob)
+    model.set_hidden_trans_prob(hidden_transition_prob)
+    model.set_infectivity(infectivity)
+    model.set_lambda(_lambda)
+    model.init_simulation()
+    model.run()
+    print(model.I_t)
+    print(np.mean(np.array(model.I_t) / nodes_number))
