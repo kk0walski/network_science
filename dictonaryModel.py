@@ -50,8 +50,8 @@ class MarkovModel:
         np.random.seed(100)
         self.tmin = 0
         self.times = [self.tmin]
-        self.hidden_status = self.hidden_status_original.copy()
-        self.physical_status = self.physical_status_original.copy()
+        self.hidden_status = (self.hidden_status_original == "A")
+        self.physical_status = (self.physical_status_original == "I")
         self.S_t = [self.init_S]
         self.U_t = [self.init_S]
         self.A_t = [self.init_A]
@@ -96,8 +96,8 @@ class MarkovModel:
         if level < self.level_limit:
             for neighbour in self.network[node]['hidden']:
                 if neighbour != parent:
-                    if self.hidden_status[neighbour] == "A":
-                        if self.physical_status[neighbour] == "I":
+                    if self.hidden_status[neighbour]:
+                        if self.physical_status[neighbour]:
                             probability_hidden = probability_hidden * (
                                 1 - self.probability_A * self._lambda
                             )
@@ -128,8 +128,8 @@ class MarkovModel:
         if level < self.level_limit:
             for neighbour in self.network[node]['physical']:
                 if neighbour != parent:
-                    if self.hidden_status[neighbour] == "A":
-                        if self.physical_status[neighbour] == "I":
+                    if self.hidden_status[neighbour]:
+                        if self.physical_status[neighbour]:
                             probability = probability * (
                                 1 - self.probability_AI * self.infectivity_aware
                             )
@@ -167,8 +167,8 @@ class MarkovModel:
         if level < self.level_limit:
             for neighbour in self.network[node]['physical']:
                 if neighbour != parent:
-                    if self.hidden_status[neighbour] == "A":
-                        if self.physical_status[neighbour] == "I":
+                    if self.hidden_status[neighbour]:
+                        if self.physical_status[neighbour]:
                             probability = probability * (
                                 1 - self.probability_AI * self.infectivity_unaware
                             )
@@ -212,8 +212,8 @@ class MarkovModel:
         chosen_infectivity = hidden_states[status_index][1]
 
         for neighbour in self.network[node]['physical']:
-            if self.hidden_status[neighbour] == "A":
-                if self.physical_status[neighbour] == "I":
+            if self.hidden_status[neighbour]:
+                if self.physical_status[neighbour]:
                     probability = probability * (
                         1 - self.probability_AI * chosen_infectivity
                     )
@@ -238,8 +238,8 @@ class MarkovModel:
         probability_hidden = 1
         probability_physical = 1
         for neighbour in self.network[node]['hidden']:
-            if self.hidden_status[neighbour] == "A":
-                if self.physical_status[neighbour] == "I":
+            if self.hidden_status[neighbour]:
+                if self.physical_status[neighbour]:
                     probability_hidden = probability_hidden * (
                         1 - self.probability_A * self._lambda
                     )
@@ -269,8 +269,8 @@ class MarkovModel:
         chosen_infectivity = hidden_states[status_index][1]
 
         for neighbour in self.network[node]['physical']:
-            if self.hidden_status[neighbour] == "A":
-                if self.physical_status[neighbour] == "I":
+            if self.hidden_status[neighbour]:
+                if self.physical_status[neighbour]:
                     probability_physical = probability_physical * (
                         1 - self.probability_AI * chosen_infectivity
                     )
@@ -297,23 +297,23 @@ class MarkovModel:
         return hidden_states[status_index][0], change_physical
 
     def hidden_chain(self, node):
-        if self.hidden_status[node] == "A":
-            if self.physical_status[node] == "S":
-                hidden_status, physical_status = self.markov_chain_AS(node)
-            else:
+        if self.hidden_status[node]:
+            if self.physical_status[node]:
                 hidden_status, physical_status = self.markov_chain_AI()
-        else:
-            if self.physical_status[node] == "S":
-                hidden_status, physical_status = self.markov_chain_US(node)
             else:
+                hidden_status, physical_status = self.markov_chain_AS(node)
+        else:
+            if self.physical_status[node]:
                 hidden_status, physical_status = "A", "I"
+            else:
+                hidden_status, physical_status = self.markov_chain_US(node)
 
         if hidden_status == "U" and physical_status == "I":
             return node, "A", "I"
         return node, hidden_status, physical_status
 
     def filter_node_rec(self, level, node):
-        if self.hidden_status[node] == "A":
+        if self.hidden_status[node]:
             return True
         elif level == self.level_limit:
             return False
@@ -330,20 +330,20 @@ class MarkovModel:
                 return max(boolean_status)
 
     def filter_node(self, node):
-        if self.hidden_status[node] == "A":
+        if self.hidden_status[node]:
             return (node, True)
         else:
             return (node, self.filter_node_rec(0, node))
 
 
     def run_chain(self, nodes, processes, nodes_number=1000):
-        infected_nodes = np.where(self.physical_status == "I")
+        infected_nodes = np.where(self.physical_status)[0]
 
         if len(infected_nodes) > 0:
             status_counts = {"S": 0, "I": 0, "A": 0, "U": 0}
             
-            aware_nodes = np.where(self.hidden_status == "A")
-            unaware_nodes = np.where(self.hidden_status == "U")
+            aware_nodes = np.where(self.hidden_status)[0]
+            unaware_nodes = np.where(np.logical_not(self.hidden_status))[0]
             with mp.Pool(processes=(10)) as filtering:
                 filtered_unaware = []
                 for node, to_process in filtering.imap_unordered(
@@ -360,9 +360,9 @@ class MarkovModel:
                     self.hidden_chain, exam_nodes, chunksize=10
                 ):
                     status_counts[hidden_status] = status_counts[hidden_status] + 1
-                    self.physical_status[node] = physical_status
+                    self.physical_status[node] = (physical_status == "I")
                     status_counts[physical_status] = status_counts[physical_status] + 1
-                    self.hidden_status[node] = hidden_status
+                    self.hidden_status[node] = (hidden_status == "A")
 
             self.S_t.append(status_counts["S"] + rest_number)
             self.I_t.append(status_counts["I"])
