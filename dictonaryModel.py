@@ -1,4 +1,5 @@
 import random
+import logging
 import progressbar
 import numpy as np
 import networkx as nx
@@ -353,7 +354,8 @@ class MarkovModel:
                         filtered_unaware.append(node)
 
             rest_number = nodes_number - len(filtered_unaware) - len(aware_nodes)
-            exam_nodes = np.append(filtered_unaware, aware_nodes)
+            temp_nodes = np.append(filtered_unaware, aware_nodes)
+            exam_nodes = temp_nodes.astype(int)
 
             with mp.Pool(processes=(10)) as pool:
                 for node, hidden_status, physical_status in pool.imap_unordered(
