@@ -228,8 +228,10 @@ class MarkovModel:
                 probability_temp = 1 - prob_AS + prob_r * (prob_AS - prob_US)
                 probability = probability * (1 - probability_temp * chosen_infectivity)
 
-        if probability < 0:
+        if probability <= 0:
             probability = 0
+        elif probability > 1:
+            probability = 1
         change_physical = np.random.choice(
             ["S", "I"], p=[probability, (1 - probability)]
         )
@@ -258,8 +260,10 @@ class MarkovModel:
                     1 - probability_temp * self._lambda
                 )
 
-        if probability_hidden < 0:
+        if probability_hidden <= 0:
             probability_hidden = 0
+        elif probability_hidden > 1:
+            probability_hidden = 1
 
         hidden_states = [("U", self.infectivity_unaware), ("A", self.infectivity_aware)]
         status_index = np.random.choice(
@@ -290,8 +294,10 @@ class MarkovModel:
                     1 - probability_temp * chosen_infectivity
                 )
 
-        if probability_physical < 0:
+        if probability_physical <= 0:
             probability_physical = 0
+        elif probability_physical > 1:
+            probability_physical = 1
         change_physical = np.random.choice(
             ["S", "I"], p=[probability_physical, (1 - probability_physical)]
         )
