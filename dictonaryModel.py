@@ -392,11 +392,20 @@ def multiplex_network(nodes_number, physical_network, hidden_network):
     
     layer_network = {}
     physical_dict = nx.to_dict_of_lists(physical_network)
+    physical_dict = {int(k):[int(i) for i in v] for k,v in physical_dict.items()}
     hidden_dict = nx.to_dict_of_lists(hidden_network)
+    hidden_dict = {int(k):[int(i) for i in v] for k,v in hidden_dict.items()}
     for node in range(nodes_number):
-        layer_network[node] = {'hidden': hidden_dict[node], 'physical': physical_dict[node]}
+        layer_network[node] = {'hidden': [a-1 for a in hidden_dict[node+1]], 'physical': [p-1 for p in physical_dict[node+1]]}
 
     return layer_network
+
+def from_file(name):
+    my_graph = nx.Graph()
+    edges = nx.read_edgelist("networks/out." + name)
+    my_graph.add_edges_from(edges.edges())
+    return my_graph
+
 
 def random_edge(graph):
     edges = list(graph.edges)
@@ -404,7 +413,13 @@ def random_edge(graph):
 
     # random edge choice
     chosen_edge = random.choice(edges)
-    chosen_nonedge = random.choice([x for x in nonedges if chosen_edge[0] == x[0]])
+    exam_nodes_length = 0
+    while exam_nodes_length <= 0:
+        chosen_edge = random.choice(edges)
+        exam_nodes = [x for x in nonedges if chosen_edge[0] == x[0]]
+        exam_nodes_length = len(exam_nodes)
+
+    chosen_nonedge = random.choice(exam_nodes)
     graph.add_edge(chosen_nonedge[0], chosen_nonedge[1])
     return graph
 
