@@ -356,7 +356,7 @@ class MarkovModel:
             
             aware_nodes = np.where(self.hidden_status)[0]
             unaware_nodes = np.where(np.logical_not(self.hidden_status))[0]
-            with mp.Pool(processes=(10)) as filtering:
+            with mp.Pool(processes=(mp.cpu_count() - 2)) as filtering:
                 filtered_unaware = []
                 for node, to_process in filtering.imap_unordered(
                     self.filter_node, unaware_nodes, chunksize=5
@@ -368,7 +368,7 @@ class MarkovModel:
             temp_nodes = np.append(filtered_unaware, aware_nodes)
             exam_nodes = temp_nodes.astype(int)
 
-            with mp.Pool(processes=(10)) as pool:
+            with mp.Pool(processes=(mp.cpu_count() - 2)) as pool:
                 for node, hidden_status, physical_status in pool.imap_unordered(
                     self.hidden_chain, exam_nodes, chunksize=10
                 ):
@@ -394,6 +394,16 @@ class MarkovModel:
             self.times.append(i)
 
 def multiplex_network(nodes_number, physical_network, hidden_network):
+    
+    layer_network = {}
+    physical_dict = nx.to_dict_of_lists(physical_network)
+    hidden_dict = nx.to_dict_of_lists(hidden_network)
+    for node in range(nodes_number):
+        layer_network[node] = {'hidden': hidden_dict[node], 'physical': physical_dict[node]}
+
+    return layer_network
+
+def multiplex_network_from_file(nodes_number, physical_network, hidden_network):
     
     layer_network = {}
     physical_dict = nx.to_dict_of_lists(physical_network)
