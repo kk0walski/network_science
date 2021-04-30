@@ -3,7 +3,7 @@ import logging
 import progressbar
 import numpy as np
 import networkx as nx
-import multiprocessing as mp
+from multiprocessing.pool import ThreadPool
 import signal
 
 
@@ -348,9 +348,6 @@ class MarkovModel:
         else:
             return (node, self.filter_node_rec(0, node))
 
-    def init_worker(self):
-        signal.signal(signal.SIGINT, signal.SIG_IGN)
-
     def run_chain(self, nodes, processes, nodes_number=1000):
         infected_nodes = np.where(self.physical_status)[0]
 
@@ -359,7 +356,7 @@ class MarkovModel:
             
             aware_nodes = np.where(self.hidden_status)[0]
             unaware_nodes = np.where(np.logical_not(self.hidden_status))[0]
-            with mp.Pool(processes=(mp.cpu_count() - 2), initializer=self.init_worker) as filtering:
+            with ThreadPool(20) as filtering:
                 filtered_unaware = []
                 for node, to_process in filtering.imap_unordered(
                     self.filter_node, unaware_nodes, chunksize=5
@@ -371,7 +368,7 @@ class MarkovModel:
             temp_nodes = np.append(filtered_unaware, aware_nodes)
             exam_nodes = temp_nodes.astype(int)
 
-            with mp.Pool(processes=(mp.cpu_count() - 2),  initializer=self.init_worker) as pool:
+            with ThreadPool(100) as pool:
                 for node, hidden_status, physical_status in pool.imap_unordered(
                     self.hidden_chain, exam_nodes, chunksize=10
                 ):
