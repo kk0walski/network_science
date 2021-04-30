@@ -92,29 +92,36 @@ class MarkovModel:
         )
         return change_hidden, change_physical
 
+    def neighbour_statuses(self, node, layer, parent=None):
+        if parent:
+            arr = self.network[node][layer]
+            temp_neighbours = np.delete(arr, np.where(arr == parent)) 
+        else:
+            temp_neighbours = self.network[node][layer]
+        return temp_neighbours, self.hidden_status[temp_neighbours], self.physical_status[temp_neighbours]
+
     def r_prob(self, level, parent, node):
         probability_hidden = 1
         if level < self.level_limit:
-            for neighbour in self.network[node]['hidden']:
-                if neighbour != parent:
-                    if self.hidden_status[neighbour]:
-                        if self.physical_status[neighbour]:
-                            probability_hidden = probability_hidden * (
-                                1 - self.probability_A * self._lambda
-                            )
-                        else:
-                            prob_US = self.probability_US(level + 1, node, neighbour)
-                            probability_temp = 1 - prob_US * self.hidden_transition_prob
-                            probability_hidden = probability_hidden * (
-                                1 - probability_temp * self._lambda
-                            )
+            for neighbour, hidden_status, physical_status in zip(*self.neighbour_statuses(node, 'hidden', parent)):
+                if hidden_status:
+                    if physical_status:
+                        probability_hidden = probability_hidden * (
+                            1 - self.probability_A * self._lambda
+                        )
                     else:
                         prob_US = self.probability_US(level + 1, node, neighbour)
-                        prob_r = self.r_prob(level + 1, node, neighbour)
-                        probability_temp = 1 - prob_r * prob_US
+                        probability_temp = 1 - prob_US * self.hidden_transition_prob
                         probability_hidden = probability_hidden * (
                             1 - probability_temp * self._lambda
                         )
+                else:
+                    prob_US = self.probability_US(level + 1, node, neighbour)
+                    prob_r = self.r_prob(level + 1, node, neighbour)
+                    probability_temp = 1 - prob_r * prob_US
+                    probability_hidden = probability_hidden * (
+                        1 - probability_temp * self._lambda
+                    )
                         
             return probability_hidden
         else:
@@ -127,32 +134,31 @@ class MarkovModel:
     def probability_AS(self, level, parent, node):
         probability = 1
         if level < self.level_limit:
-            for neighbour in self.network[node]['physical']:
-                if neighbour != parent:
-                    if self.hidden_status[neighbour]:
-                        if self.physical_status[neighbour]:
-                            probability = probability * (
-                                1 - self.probability_AI * self.infectivity_aware
-                            )
-                        else:
-                            prob_AS = self.probability_AS(level + 1, node, neighbour)
-                            prob_US = self.probability_US(level + 1, node, neighbour)
-                            probability_temp = (
-                                1
-                                - prob_AS
-                                + self.hidden_transition_prob * (prob_AS - prob_US)
-                            )
-                            probability = probability * (
-                                1 - probability_temp * self.infectivity_aware
-                            )
+            for neighbour, hidden_status, physical_status in zip(*self.neighbour_statuses(node, 'physical', parent)):
+                if hidden_status:
+                    if physical_status:
+                        probability = probability * (
+                            1 - self.probability_AI * self.infectivity_aware
+                        )
                     else:
-                        prob_US = self.probability_US(level + 1, node, neighbour)
                         prob_AS = self.probability_AS(level + 1, node, neighbour)
-                        prob_r = self.r_prob(level + 1, node, neighbour)
-                        probability_temp = 1 - prob_AS + prob_r * (prob_AS - prob_US)
+                        prob_US = self.probability_US(level + 1, node, neighbour)
+                        probability_temp = (
+                            1
+                            - prob_AS
+                            + self.hidden_transition_prob * (prob_AS - prob_US)
+                        )
                         probability = probability * (
                             1 - probability_temp * self.infectivity_aware
                         )
+                else:
+                    prob_US = self.probability_US(level + 1, node, neighbour)
+                    prob_AS = self.probability_AS(level + 1, node, neighbour)
+                    prob_r = self.r_prob(level + 1, node, neighbour)
+                    probability_temp = 1 - prob_AS + prob_r * (prob_AS - prob_US)
+                    probability = probability * (
+                        1 - probability_temp * self.infectivity_aware
+                    )
             return probability
         else:
             _sum = (
@@ -166,32 +172,31 @@ class MarkovModel:
     def probability_US(self, level, parent, node):
         probability = 1
         if level < self.level_limit:
-            for neighbour in self.network[node]['physical']:
-                if neighbour != parent:
-                    if self.hidden_status[neighbour]:
-                        if self.physical_status[neighbour]:
-                            probability = probability * (
-                                1 - self.probability_AI * self.infectivity_unaware
-                            )
-                        else:
-                            prob_AS = self.probability_AS(level + 1, node, neighbour)
-                            prob_US = self.probability_US(level + 1, node, neighbour)
-                            probability_temp = (
-                                1
-                                - prob_AS
-                                + self.hidden_transition_prob * (prob_AS - prob_US)
-                            )
-                            probability = probability * (
-                                1 - probability_temp * self.infectivity_unaware
-                            )
+            for neighbour, hidden_status, physical_status in zip(*self.neighbour_statuses(node, 'physical', parent)):
+                if hidden_status:
+                    if physical_status:
+                        probability = probability * (
+                            1 - self.probability_AI * self.infectivity_unaware
+                        )
                     else:
-                        prob_US = self.probability_US(level + 1, node, neighbour)
                         prob_AS = self.probability_AS(level + 1, node, neighbour)
-                        prob_r = self.r_prob(level + 1, node, neighbour)
-                        probability_temp = 1 - prob_AS + prob_r * (prob_AS - prob_US)
+                        prob_US = self.probability_US(level + 1, node, neighbour)
+                        probability_temp = (
+                            1
+                            - prob_AS
+                            + self.hidden_transition_prob * (prob_AS - prob_US)
+                        )
                         probability = probability * (
                             1 - probability_temp * self.infectivity_unaware
                         )
+                else:
+                    prob_US = self.probability_US(level + 1, node, neighbour)
+                    prob_AS = self.probability_AS(level + 1, node, neighbour)
+                    prob_r = self.r_prob(level + 1, node, neighbour)
+                    probability_temp = 1 - prob_AS + prob_r * (prob_AS - prob_US)
+                    probability = probability * (
+                        1 - probability_temp * self.infectivity_unaware
+                    )
             return probability
         else:
             _sum = (
@@ -212,9 +217,9 @@ class MarkovModel:
         probability = 1
         chosen_infectivity = hidden_states[status_index][1]
 
-        for neighbour in self.network[node]['physical']:
-            if self.hidden_status[neighbour]:
-                if self.physical_status[neighbour]:
+        for neighbour, hidden_status, physical_status in zip(*self.neighbour_statuses(node, 'physical')):
+            if hidden_status:
+                if physical_status:
                     probability = probability * (
                         1 - self.probability_AI * chosen_infectivity
                     )
@@ -240,9 +245,9 @@ class MarkovModel:
     def markov_chain_US(self, node):
         probability_hidden = 1
         probability_physical = 1
-        for neighbour in self.network[node]['hidden']:
-            if self.hidden_status[neighbour]:
-                if self.physical_status[neighbour]:
+        for neighbour, hidden_status, physical_status in zip(*self.neighbour_statuses(node, 'hidden')):
+            if hidden_status:
+                if physical_status:
                     probability_hidden = probability_hidden * (
                         1 - self.probability_A * self._lambda
                     )
@@ -273,9 +278,9 @@ class MarkovModel:
 
         chosen_infectivity = hidden_states[status_index][1]
 
-        for neighbour in self.network[node]['physical']:
-            if self.hidden_status[neighbour]:
-                if self.physical_status[neighbour]:
+        for neighbour, hidden_status, physical_status in zip(*self.neighbour_statuses(node, 'physical')):
+            if hidden_status:
+                if physical_status:
                     probability_physical = probability_physical * (
                         1 - self.probability_AI * chosen_infectivity
                     )
