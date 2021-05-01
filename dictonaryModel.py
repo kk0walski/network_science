@@ -34,8 +34,8 @@ class MarkovModel:
             self.initial_infecteds = random.sample(
                 list(network.keys()), self.initial_number
             )
-        elif min([infected in network[node]['physical'] for infected in initial_infecteds]):
-            self.initial_infecteds = [initial_infecteds]
+        else:
+            self.initial_infecteds = [infected for infected in initial_infecteds if infected < nodes_number and infected > 0]
 
         self.init_S = self.nodes_number - len(self.initial_infecteds)
         self.init_A =  len(self.initial_infecteds)
@@ -328,7 +328,7 @@ class MarkovModel:
     def filter_node_rec(self, level, node):
         if self.hidden_status[node]:
             return True
-        elif level == self.level_limit:
+        elif level == self.level_limit - 1:
             return False
         else:
             boolean_status = list(
