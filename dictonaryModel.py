@@ -16,7 +16,7 @@ class MarkovModel:
         initial_infecteds=None,
         rho=None,
         tmin=0,
-        tmax=30,
+        tmax=10,
     ):
 
         self.nodes_number = nodes_number
