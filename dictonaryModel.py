@@ -31,6 +31,7 @@ class MarkovModel:
                 self.initial_number = 1
             else:
                 self.initial_number = int(round(len(list(network.keys())) * rho))
+            random.seed(100)
             self.initial_infecteds = random.sample(
                 list(network.keys()), self.initial_number
             )
@@ -44,12 +45,11 @@ class MarkovModel:
             self.physical_status_original[node] = "I"
 
     def rnd(self):
-        exp = np.random.randint(-5, -1)
+        exp = np.random.randint(-11, -1)
         significand = 0.9 * np.random.random() + 0.1
         return significand * 10 ** exp
 
     def init_simulation(self):
-        np.random.seed(100)
         self.tmin = 0
         self.times = [self.tmin]
         self.hidden_status = (self.hidden_status_original == "A")
