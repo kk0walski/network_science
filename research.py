@@ -25,7 +25,7 @@ def create_network(nodes):
         return multiplex_network_from_file(nodes_number, physical_layer, hidden_layer)
     else:
         nodes_number = nodes
-        physical_layer = nx.barabasi_albert_graph(nodes_number, 10, seed=1000)
+        physical_layer = nx.barabasi_albert_graph(nodes_number, 5)
         hidden_layer = physical_layer.copy()
         for i in range(400):
             hidden_layer = random_edge(hidden_layer)

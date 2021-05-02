@@ -328,7 +328,7 @@ class MarkovModel:
     def filter_node_rec(self, level, node):
         if self.hidden_status[node]:
             return True
-        elif level == self.level_limit - 1:
+        elif level == self.level_limit:
             return False
         else:
             boolean_status = list(
