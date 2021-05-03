@@ -368,7 +368,7 @@ class MarkovModel:
             temp_nodes = np.append(filtered_unaware, aware_nodes)
             exam_nodes = temp_nodes.astype(int)
 
-            with ThreadPool(100) as pool:
+            with ThreadPool(10) as pool:
                 for node, hidden_status, physical_status in pool.imap_unordered(
                     self.hidden_chain, exam_nodes, chunksize=10
                 ):

@@ -69,7 +69,7 @@ def do_research(filepath, tree_level):
             print("I/O error")
     
     parameters = []
-    for network in ["barabassi1000"]:
+    for network in ["hiv", "school", "infectious"]:
         for physical_prob in np.round(np.linspace(0,1,11), 2):
             for hidden_prob in np.round(np.linspace(0,1,11), 2):
                 for infectivity in np.round(np.linspace(0,1,11), 2):
@@ -89,4 +89,4 @@ def do_research(filepath, tree_level):
 
 
 if __name__ == "__main__":
-    do_research("experiment8.csv", 1)
+    do_research("experiment9.csv", 2)
