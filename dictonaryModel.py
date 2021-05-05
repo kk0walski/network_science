@@ -23,6 +23,7 @@ class MarkovModel:
         self.network = network
         self.tmin = tmin
         self.tmax = tmax
+        self.m = 0
         self.hidden_status_original = np.array(['U' for _ in range(nodes_number)])
         self.physical_status_original = np.array(['S' for _ in range(nodes_number)])
 
@@ -69,6 +70,9 @@ class MarkovModel:
     def set_lambda(self, _lambda):
         self._lambda = _lambda
 
+    def set_media(self, m):
+        self.m = m
+
     def set_physical_trans_prob(self, prob):
         self.physical_transition_prob = prob
         self.probability_AI = 1 - self.physical_transition_prob
@@ -76,7 +80,7 @@ class MarkovModel:
     def set_hidden_trans_prob(self, prob):
         self.hidden_transition_prob = prob
         self.probability_A = (
-            1 - self.physical_transition_prob * self.hidden_transition_prob
+            1 - self.physical_transition_prob * self.hidden_transition_prob + self.physical_transition_prob * self.hidden_transition_prob*self.m
         )
 
     def set_factor(self, factor):
@@ -86,6 +90,11 @@ class MarkovModel:
         change_hidden = np.random.choice(
             ["U", "A"],
             p=[self.hidden_transition_prob, (1 - self.hidden_transition_prob)],
+        )
+        if change_hidden == "U":
+            change_hidden = np.random.choice(
+            ["U", "A"],
+            p=[(1 - self.m), self.m],
         )
         change_physical = np.random.choice(
             ["S", "I"],
@@ -112,14 +121,14 @@ class MarkovModel:
                         )
                     else:
                         prob_US = self.probability_US(level + 1, node, neighbour)
-                        probability_temp = 1 - prob_US * self.hidden_transition_prob
+                        probability_temp = 1 - prob_US * self.hidden_transition_prob*(1 - self.m)
                         probability_hidden = probability_hidden * (
                             1 - probability_temp * self._lambda
                         )
                 else:
                     prob_US = self.probability_US(level + 1, node, neighbour)
                     prob_r = self.r_prob(level + 1, node, neighbour)
-                    probability_temp = 1 - prob_r * prob_US
+                    probability_temp = 1 - prob_r * prob_US*(1 - self.m)
                     probability_hidden = probability_hidden * (
                         1 - probability_temp * self._lambda
                     )
@@ -147,7 +156,7 @@ class MarkovModel:
                         probability_temp = (
                             1
                             - prob_AS
-                            + self.hidden_transition_prob * (prob_AS - prob_US)
+                            + self.hidden_transition_prob * ((prob_AS - prob_US) + self.m(prob_US - prob_AS))
                         )
                         probability = probability * (
                             1 - probability_temp * self.infectivity_aware
@@ -156,7 +165,7 @@ class MarkovModel:
                     prob_US = self.probability_US(level + 1, node, neighbour)
                     prob_AS = self.probability_AS(level + 1, node, neighbour)
                     prob_r = self.r_prob(level + 1, node, neighbour)
-                    probability_temp = 1 - prob_AS + prob_r * (prob_AS - prob_US)
+                     probability_temp = 1 - prob_AS + prob_r * ((prob_AS - prob_US) + self.m(prob_US - prob_AS))
                     probability = probability * (
                         1 - probability_temp * self.infectivity_aware
                     )
@@ -185,7 +194,7 @@ class MarkovModel:
                         probability_temp = (
                             1
                             - prob_AS
-                            + self.hidden_transition_prob * (prob_AS - prob_US)
+                            + self.hidden_transition_prob * ((prob_AS - prob_US) + self.m(prob_US - prob_AS))
                         )
                         probability = probability * (
                             1 - probability_temp * self.infectivity_unaware
@@ -194,7 +203,7 @@ class MarkovModel:
                     prob_US = self.probability_US(level + 1, node, neighbour)
                     prob_AS = self.probability_AS(level + 1, node, neighbour)
                     prob_r = self.r_prob(level + 1, node, neighbour)
-                    probability_temp = 1 - prob_AS + prob_r * (prob_AS - prob_US)
+                    probability_temp = 1 - prob_AS + prob_r * ((prob_AS - prob_US) + self.m(prob_US - prob_AS))
                     probability = probability * (
                         1 - probability_temp * self.infectivity_unaware
                     )
@@ -216,6 +225,12 @@ class MarkovModel:
             p=[self.hidden_transition_prob, (1 - self.hidden_transition_prob)],
         )
         probability = 1
+        if hidden_states[status_index][0] == "U":
+             status_index = np.random.choice(
+            2,
+            p=[(1-self.m), self.m],
+            )
+
         chosen_infectivity = hidden_states[status_index][1]
 
         for neighbour, hidden_status, physical_status in zip(*self.neighbour_statuses(node, 'physical')):
@@ -276,6 +291,12 @@ class MarkovModel:
             2,
             p=[self.hidden_transition_prob, (1 - self.hidden_transition_prob)],
         )
+
+        if hidden_states[status_index][0] == "U":
+             status_index = np.random.choice(
+            2,
+            p=[(1-self.m), self.m],
+            )
 
         chosen_infectivity = hidden_states[status_index][1]
 
