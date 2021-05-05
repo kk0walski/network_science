@@ -24,6 +24,7 @@ class MarkovModel:
         self.tmin = tmin
         self.tmax = tmax
         self.m = 0
+        self.a = np.ones(nodes_number)
         self.hidden_status_original = np.array(['U' for _ in range(nodes_number)])
         self.physical_status_original = np.array(['S' for _ in range(nodes_number)])
 
@@ -117,27 +118,27 @@ class MarkovModel:
                 if hidden_status:
                     if physical_status:
                         probability_hidden = probability_hidden * (
-                            1 - self.probability_A * self._lambda
+                            1 - self.a[neighbour]*self.probability_A * self._lambda
                         )
                     else:
                         prob_US = self.probability_US(level + 1, node, neighbour)
                         probability_temp = 1 - prob_US * self.hidden_transition_prob*(1 - self.m)
                         probability_hidden = probability_hidden * (
-                            1 - probability_temp * self._lambda
+                            1 - self.a[neighbour]*probability_temp * self._lambda
                         )
                 else:
                     prob_US = self.probability_US(level + 1, node, neighbour)
                     prob_r = self.r_prob(level + 1, node, neighbour)
                     probability_temp = 1 - prob_r * prob_US*(1 - self.m)
                     probability_hidden = probability_hidden * (
-                        1 - probability_temp * self._lambda
+                        1 - self.a[neighbour]*probability_temp * self._lambda
                     )
                         
             return probability_hidden
         else:
             _sum = (
                 1
-                - len(list(self.network[node]['hidden'])) * self.rnd() * self._lambda
+                - len(list(self.network[node]['hidden'])) * self.rnd() * self._lambda*self.a[neighbour]
             )
             return _sum
 
