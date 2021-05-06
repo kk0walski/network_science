@@ -32,7 +32,7 @@ def create_network(nodes):
         return multiplex_network(nodes_number, physical_layer, hidden_layer)
 
 def experiment(parameters):
-    tree_level, network_name, physical_prob, hidden_prob, infectivity, _lambda = parameters
+    tree_level, network_name, physical_prob, hidden_prob, infectivity, _lambda, media = parameters
     multiplex_network = read_network(network_name)
     nodes_number = len(multiplex_network.keys())
     model = MarkovModel(nodes_number, multiplex_network,  rho=0.2)
@@ -42,11 +42,12 @@ def experiment(parameters):
     model.set_hidden_trans_prob(hidden_prob)
     model.set_infectivity(infectivity)
     model.set_lambda(_lambda)
+    model.set_media(media)
     reasult = {"nodes": nodes_number, "rho": 0.2,
         "network": network_name, "beta": infectivity, 
         "lambda": _lambda, "factor": 0.01,
         "physical_infectivity": physical_prob,
-        "hidden_infectivity": hidden_prob,
+        "hidden_infectivity": hidden_prob, "media": media,
         "aware": 0, "infected": 0
         }
     model.init_simulation()
@@ -70,11 +71,12 @@ def do_research(filepath, tree_level):
     
     parameters = []
     for network in ["hiv", "school", "infectious"]:
-        for physical_prob in np.round(np.linspace(0,1,11), 2):
-            for hidden_prob in np.round(np.linspace(0,1,11), 2):
-                for infectivity in np.round(np.linspace(0,1,11), 2):
-                    for _lambda in np.round(np.linspace(0,1,11), 2):
-                        parameters.append((tree_level, network, physical_prob, hidden_prob, infectivity, _lambda))
+        for media in np.round(np.linspace(0,1,11), 2):
+            for physical_prob in np.round(np.linspace(0,1,11), 2):
+                for hidden_prob in np.round(np.linspace(0,1,11), 2):
+                    for infectivity in np.round(np.linspace(0,1,11), 2):
+                        for _lambda in np.round(np.linspace(0,1,11), 2):
+                            parameters.append((tree_level, network, physical_prob, hidden_prob, infectivity, _lambda, media))
 
     print("Parametry wygenerowae")
 
