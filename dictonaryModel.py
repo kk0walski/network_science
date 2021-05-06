@@ -122,20 +122,20 @@ class MarkovModel:
                 if hidden_status:
                     if physical_status:
                         probability_hidden = probability_hidden * (
-                            1 - self.a[neighbour]*self.probability_A * self._lambda
+                            1 - self.network[neighbour]['degree']*self.probability_A * self._lambda
                         )
                     else:
                         prob_US = self.probability_US(level + 1, node, neighbour)
                         probability_temp = 1 - prob_US * self.hidden_transition_prob*(1 - self.m)
                         probability_hidden = probability_hidden * (
-                            1 - self.a[neighbour]*probability_temp * self._lambda
+                            1 - self.network[neighbour]['degree']*probability_temp * self._lambda
                         )
                 else:
                     prob_US = self.probability_US(level + 1, node, neighbour)
                     prob_r = self.r_prob(level + 1, node, neighbour)
                     probability_temp = 1 - prob_r * prob_US*(1 - self.m)
                     probability_hidden = probability_hidden * (
-                        1 - self.a[neighbour]*probability_temp * self._lambda
+                        1 - self.network[neighbour]['degree']*probability_temp * self._lambda
                     )
                         
             return probability_hidden
@@ -465,13 +465,18 @@ def random_edge(graph):
     return graph
 
 if __name__ == "__main__":
-    nodes_number = 1000
-    physical_layer = nx.barabasi_albert_graph(nodes_number, 25)
+    physical_layer = from_file("school")
+    nodes_number = len(physical_layer.nodes())
     hidden_layer = physical_layer.copy()
     for i in range(400):
         hidden_layer = random_edge(hidden_layer)
-    network = multiplex_network(nodes_number, physical_layer, hidden_layer)
-    with open('networks/barabassi1000.json', 'w') as fp:
+    network = multiplex_network_from_file(nodes_number, physical_layer, hidden_layer)
+    degrees = [len(value['physical']) for key, value in network.items()]
+    max_degree = max(degrees)
+    min_degree = min(degrees)
+    for key, value in network.items():
+        network[key]['degree'] = (len(value['physical']) - min_degree)/(max_degree - min_degree)
+    with open('networks/school.json', 'w') as fp:
         json.dump(network, fp)
 
     # _lambda = 0.2

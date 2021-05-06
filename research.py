@@ -70,7 +70,7 @@ def do_research(filepath, tree_level):
             print("I/O error")
     
     parameters = []
-    for network in ["hiv", "school", "infectious"]:
+    for network in ["barabassi100", "barabassi1000", "hiv", "school", "infectious"]:
         for media in np.round(np.linspace(0,1,11), 2):
             for physical_prob in np.round(np.linspace(0,1,11), 2):
                 for hidden_prob in np.round(np.linspace(0,1,11), 2):
