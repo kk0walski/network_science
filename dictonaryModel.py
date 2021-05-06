@@ -1,3 +1,4 @@
+import json
 import random
 import logging
 import progressbar
@@ -21,10 +22,13 @@ class MarkovModel:
 
         self.nodes_number = nodes_number
         self.network = network
+        degrees = [len(network[i]['physical']) for i in range(nodes_number)]
+        self.max_degree = max(degrees)
+        self.min_degree = min(degrees)
         self.tmin = tmin
         self.tmax = tmax
         self.m = 0
-        self.a = np.ones(nodes_number)
+        self.a = np.array([(len(network[i]['physical']) - self.min_degree)/(self.max_degree - self.min_degree) for i in range(nodes_number)])
         self.hidden_status_original = np.array(['U' for _ in range(nodes_number)])
         self.physical_status_original = np.array(['S' for _ in range(nodes_number)])
 
@@ -461,28 +465,31 @@ def random_edge(graph):
     return graph
 
 if __name__ == "__main__":
-    nodes_number = 100
-    physical_layer = nx.barabasi_albert_graph(nodes_number, 5)
+    nodes_number = 1000
+    physical_layer = nx.barabasi_albert_graph(nodes_number, 25)
     hidden_layer = physical_layer.copy()
     for i in range(400):
         hidden_layer = random_edge(hidden_layer)
     network = multiplex_network(nodes_number, physical_layer, hidden_layer)
+    with open('networks/barabassi1000.json', 'w') as fp:
+        json.dump(network, fp)
 
-    _lambda = 0.2
-    rho = 0.2
-    hidden_transition_prob = 0.25
-    physical_transition_prob = 0.25
-    factor = 0.01
-    level_limit = 2
-    infectivity = 0.0
-    model = MarkovModel(nodes_number, network,  rho=0.2)
-    model.set_level(2)
-    model.set_factor(factor)
-    model.set_physical_trans_prob(physical_transition_prob)
-    model.set_hidden_trans_prob(hidden_transition_prob)
-    model.set_infectivity(infectivity)
-    model.set_lambda(_lambda)
-    model.init_simulation()
-    model.run()
-    print(model.I_t)
-    print(np.mean(np.array(model.I_t) / nodes_number))
+    # _lambda = 0.2
+    # rho = 0.2
+    # hidden_transition_prob = 0.25
+    # physical_transition_prob = 0.25
+    # factor = 0.01
+    # level_limit = 2
+    # infectivity = 0.0
+    # model = MarkovModel(nodes_number, network,  rho=0.2)
+    # print(model.a)
+    # model.set_level(2)
+    # model.set_factor(factor)
+    # model.set_physical_trans_prob(physical_transition_prob)
+    # model.set_hidden_trans_prob(hidden_transition_prob)
+    # model.set_infectivity(infectivity)
+    # model.set_lambda(_lambda)
+    # model.init_simulation()
+    # model.run()
+    # print(model.I_t)
+    # print(np.mean(np.array(model.I_t) / nodes_number))

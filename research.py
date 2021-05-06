@@ -60,7 +60,7 @@ def init_worker():
     signal.signal(signal.SIGINT, signal.SIG_IGN)
 
 def do_research(filepath, tree_level):
-    column_names = ["nodes", "rho", "network", "beta", "lambda", "factor", "physical_infectivity", "hidden_infectivity", "aware", "infected"]
+    column_names = ["nodes", "rho", "network", "beta", "lambda", "media", "factor", "physical_infectivity", "hidden_infectivity", "aware", "infected"]
     if not os.path.isfile(filepath):
         try:
             with open(filepath, "a", newline='') as csvfile:
@@ -91,4 +91,4 @@ def do_research(filepath, tree_level):
 
 
 if __name__ == "__main__":
-    do_research("experiment9.csv", 2)
+    do_research("experiment9.csv", 1)
