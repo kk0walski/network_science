@@ -22,13 +22,9 @@ class MarkovModel:
 
         self.nodes_number = nodes_number
         self.network = network
-        degrees = [len(network[i]['physical']) for i in range(nodes_number)]
-        self.max_degree = max(degrees)
-        self.min_degree = min(degrees)
         self.tmin = tmin
         self.tmax = tmax
         self.m = 0
-        self.a = np.array([(len(network[i]['physical']) - self.min_degree)/(self.max_degree - self.min_degree) for i in range(nodes_number)])
         self.hidden_status_original = np.array(['U' for _ in range(nodes_number)])
         self.physical_status_original = np.array(['S' for _ in range(nodes_number)])
 
@@ -122,20 +118,20 @@ class MarkovModel:
                 if hidden_status:
                     if physical_status:
                         probability_hidden = probability_hidden * (
-                            1 - self.network[neighbour]['degree']*self.probability_A * self._lambda
+                            1 - self.probability_A * self._lambda
                         )
                     else:
                         prob_US = self.probability_US(level + 1, node, neighbour)
                         probability_temp = 1 - prob_US * self.hidden_transition_prob*(1 - self.m)
                         probability_hidden = probability_hidden * (
-                            1 - self.network[neighbour]['degree']*probability_temp * self._lambda
+                            1 - probability_temp * self._lambda
                         )
                 else:
                     prob_US = self.probability_US(level + 1, node, neighbour)
                     prob_r = self.r_prob(level + 1, node, neighbour)
                     probability_temp = 1 - prob_r * prob_US*(1 - self.m)
                     probability_hidden = probability_hidden * (
-                        1 - self.network[neighbour]['degree']*probability_temp * self._lambda
+                        1 - probability_temp * self._lambda
                     )
                         
             return probability_hidden
@@ -444,7 +440,8 @@ def multiplex_network_from_file(nodes_number, physical_network, hidden_network):
 def from_file(name):
     my_graph = nx.Graph()
     edges = nx.read_edgelist("networks/out." + name)
-    my_graph.add_edges_from(edges.edges())
+    new_edges = [(int(a) - 1, int(b) - 1) for a, b in edges.edges()]
+    my_graph.add_edges_from(new_edges)
     return my_graph
 
 
@@ -466,18 +463,18 @@ def random_edge(graph):
 
 if __name__ == "__main__":
     physical_layer = from_file("school")
-    nodes_number = len(physical_layer.nodes())
-    hidden_layer = physical_layer.copy()
-    for i in range(400):
-        hidden_layer = random_edge(hidden_layer)
-    network = multiplex_network_from_file(nodes_number, physical_layer, hidden_layer)
-    degrees = [len(value['physical']) for key, value in network.items()]
-    max_degree = max(degrees)
-    min_degree = min(degrees)
-    for key, value in network.items():
-        network[key]['degree'] = (len(value['physical']) - min_degree)/(max_degree - min_degree)
-    with open('networks/school.json', 'w') as fp:
-        json.dump(network, fp)
+    # nodes_number = len(physical_layer.nodes())
+    # hidden_layer = physical_layer.copy()
+    # for i in range(400):
+    #     hidden_layer = random_edge(hidden_layer)
+    # network = multiplex_network_from_file(nodes_number, physical_layer, hidden_layer)
+    # degrees = [len(value['physical']) for key, value in network.items()]
+    # max_degree = max(degrees)
+    # min_degree = min(degrees)
+    # for key, value in network.items():
+    #     network[key]['degree'] = (len(value['physical']) - min_degree)/(max_degree - min_degree)
+    # with open('networks/school.json', 'w') as fp:
+    #     json.dump(network, fp)
 
     # _lambda = 0.2
     # rho = 0.2
