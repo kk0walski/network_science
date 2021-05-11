@@ -32,7 +32,7 @@ def create_network(nodes):
         return multiplex_network(nodes_number, physical_layer, hidden_layer)
 
 def experiment(parameters):
-    tree_level, network_name, physical_prob, hidden_prob, infectivity, _lambda, media = parameters
+    filepath, column_names, tree_level, network_name, physical_prob, hidden_prob, infectivity, _lambda, media = parameters
     multiplex_network = read_network(network_name)
     nodes_number = len(multiplex_network.keys())
     model = MarkovModel(nodes_number, multiplex_network,  rho=0.2)
@@ -54,7 +54,12 @@ def experiment(parameters):
     model.run()
     reasult["infected"] = np.mean(np.array(model.I_t) / nodes_number)
     reasult["aware"] = np.mean(np.array(model.A_t) / nodes_number)
-    return reasult
+    try:
+        with open(filepath, "a") as csvfile:
+            writer = csv.DictWriter(csvfile, fieldnames=column_names, lineterminator='\n')
+            writer.writerow(reasult)
+    except IOError:
+        print("I/O error")
 
 def init_worker():
     signal.signal(signal.SIGINT, signal.SIG_IGN)
@@ -70,25 +75,20 @@ def do_research(filepath, tree_level):
             print("I/O error")
     
     parameters = []
-    for network in ["barabassi100", "barabassi1000", "hiv", "school", "infectious"]:
+    for network in ["hiv", "school", "infectious"]:
         for media in np.round(np.linspace(0,1,11), 2):
             for physical_prob in np.round(np.linspace(0,1,11), 2):
                 for hidden_prob in np.round(np.linspace(0,1,11), 2):
                     for infectivity in np.round(np.linspace(0,1,11), 2):
                         for _lambda in np.round(np.linspace(0,1,11), 2):
-                            parameters.append((tree_level, network, physical_prob, hidden_prob, infectivity, _lambda, media))
+                            parameters.append((filepath, column_names, tree_level, network, physical_prob, hidden_prob, infectivity, _lambda, media))
 
     print("Parametry wygenerowae")
 
     with Pool(initializer=init_worker) as pool:
-        for reasult in progressbar.progressbar(pool.imap_unordered(experiment, parameters)):
-            try:
-                with open(filepath, "a") as csvfile:
-                    writer = csv.DictWriter(csvfile, fieldnames=column_names, lineterminator='\n')
-                    writer.writerow(reasult)
-            except IOError:
-                print("I/O error")
+        for _ in progressbar.progressbar(pool.imap_unordered(experiment, parameters, chunksize=250)):
+            pass
 
 
 if __name__ == "__main__":
-    do_research("experiment9.csv", 1)
+    do_research("experiment9.csv", 2)
