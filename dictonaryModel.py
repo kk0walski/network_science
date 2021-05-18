@@ -452,38 +452,3 @@ def random_edge(graph):
     chosen_nonedge = random.choice(exam_nodes)
     graph.add_edge(chosen_nonedge[0], chosen_nonedge[1])
     return graph
-
-if __name__ == "__main__":
-    physical_layer = from_file("school")
-    # nodes_number = len(physical_layer.nodes())
-    # hidden_layer = physical_layer.copy()
-    # for i in range(400):
-    #     hidden_layer = random_edge(hidden_layer)
-    # network = multiplex_network_from_file(nodes_number, physical_layer, hidden_layer)
-    # degrees = [len(value['physical']) for key, value in network.items()]
-    # max_degree = max(degrees)
-    # min_degree = min(degrees)
-    # for key, value in network.items():
-    #     network[key]['degree'] = (len(value['physical']) - min_degree)/(max_degree - min_degree)
-    # with open('networks/school.json', 'w') as fp:
-    #     json.dump(network, fp)
-
-    # _lambda = 0.2
-    # rho = 0.2
-    # hidden_transition_prob = 0.25
-    # physical_transition_prob = 0.25
-    # factor = 0.01
-    # level_limit = 2
-    # infectivity = 0.0
-    # model = MarkovModel(nodes_number, network,  rho=0.2)
-    # print(model.a)
-    # model.set_level(2)
-    # model.set_factor(factor)
-    # model.set_physical_trans_prob(physical_transition_prob)
-    # model.set_hidden_trans_prob(hidden_transition_prob)
-    # model.set_infectivity(infectivity)
-    # model.set_lambda(_lambda)
-    # model.init_simulation()
-    # model.run()
-    # print(model.I_t)
-    # print(np.mean(np.array(model.I_t) / nodes_number))
