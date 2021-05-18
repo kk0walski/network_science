@@ -1,11 +1,6 @@
-import json
 import random
-import logging
-import progressbar
 import numpy as np
 import networkx as nx
-from multiprocessing.pool import ThreadPool
-import signal
 
 
 class MarkovModel:
@@ -379,26 +374,22 @@ class MarkovModel:
             
             aware_nodes = np.where(self.hidden_status)[0]
             unaware_nodes = np.where(np.logical_not(self.hidden_status))[0]
-            with ThreadPool(20) as filtering:
-                filtered_unaware = []
-                for node, to_process in filtering.imap_unordered(
-                    self.filter_node, unaware_nodes, chunksize=5
-                ):
-                    if to_process:
-                        filtered_unaware.append(node)
+            filtered_unaware = []
+            for node in unaware_nodes:
+                node_number, to_process = self.filter_node(node)
+                if to_process:
+                    filtered_unaware.append(node_number)
 
             rest_number = nodes_number - len(filtered_unaware) - len(aware_nodes)
             temp_nodes = np.append(filtered_unaware, aware_nodes)
             exam_nodes = temp_nodes.astype(int)
 
-            with ThreadPool(10) as pool:
-                for node, hidden_status, physical_status in pool.imap_unordered(
-                    self.hidden_chain, exam_nodes, chunksize=10
-                ):
-                    status_counts[hidden_status] = status_counts[hidden_status] + 1
-                    self.physical_status[node] = (physical_status == "I")
-                    status_counts[physical_status] = status_counts[physical_status] + 1
-                    self.hidden_status[node] = (hidden_status == "A")
+            for node in exam_nodes:
+                node_number, hidden_status, physical_status = self.hidden_chain(node)
+                status_counts[hidden_status] = status_counts[hidden_status] + 1
+                self.physical_status[node] = (physical_status == "I")
+                status_counts[physical_status] = status_counts[physical_status] + 1
+                self.hidden_status[node] = (hidden_status == "A")
 
             self.S_t.append(status_counts["S"] + rest_number)
             self.I_t.append(status_counts["I"])
