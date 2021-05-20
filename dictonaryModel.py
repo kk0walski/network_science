@@ -1,6 +1,9 @@
+from os import stat
 import random
+import itertools
 import numpy as np
 import networkx as nx
+from collections import Counter, defaultdict
 
 
 class MarkovModel:
@@ -51,7 +54,9 @@ class MarkovModel:
         self.tmin = 0
         self.times = [self.tmin]
         self.hidden_status = (self.hidden_status_original == "A")
+        self.hidden_status_copy = self.hidden_status[:]
         self.physical_status = (self.physical_status_original == "I")
+        self.physical_status_copy = self.physical_status[:]
         self.S_t = [self.init_S]
         self.U_t = [self.init_S]
         self.A_t = [self.init_A]
@@ -340,8 +345,11 @@ class MarkovModel:
                 hidden_status, physical_status = self.markov_chain_US(node)
 
         if hidden_status == "U" and physical_status == "I":
-            return node, "A", "I"
-        return node, hidden_status, physical_status
+            hidden_status = "A"
+
+        self.physical_status_copy[node] = (physical_status == "I")
+        self.hidden_status_copy[node] = (hidden_status == "A")
+        return hidden_status, physical_status
 
     def filter_node_rec(self, level, node):
         if self.hidden_status[node]:
@@ -362,38 +370,20 @@ class MarkovModel:
 
     def filter_node(self, node):
         if self.hidden_status[node]:
-            return (node, True)
+            return True
         else:
-            return (node, self.filter_node_rec(0, node))
+            return self.filter_node_rec(0, node)
 
-    def run_chain(self, nodes, processes, nodes_number=1000):
+    def run_chain(self, nodes, nodes_number=1000):
         infected_nodes = np.where(self.physical_status)[0]
 
         if len(infected_nodes) > 0:
-            status_counts = {"S": 0, "I": 0, "A": 0, "U": 0}
-            
-            aware_nodes = np.where(self.hidden_status)[0]
-            unaware_nodes = np.where(np.logical_not(self.hidden_status))[0]
-            filtered_unaware = []
-            for node in unaware_nodes:
-                node_number, to_process = self.filter_node(node)
-                if to_process:
-                    filtered_unaware.append(node_number)
-
-            rest_number = nodes_number - len(filtered_unaware) - len(aware_nodes)
-            temp_nodes = np.append(filtered_unaware, aware_nodes)
-            exam_nodes = temp_nodes.astype(int)
-
-            for node in exam_nodes:
-                node_number, hidden_status, physical_status = self.hidden_chain(node)
-                status_counts[hidden_status] = status_counts[hidden_status] + 1
-                self.physical_status[node] = (physical_status == "I")
-                status_counts[physical_status] = status_counts[physical_status] + 1
-                self.hidden_status[node] = (hidden_status == "A")
-
-            self.S_t.append(status_counts["S"] + rest_number)
+            status_counts = defaultdict(int, Counter(itertools.chain(*map(self.hidden_chain, filter(self.filter_node, range(nodes_number))))))
+            self.physical_status = self.physical_status_copy[:]
+            self.hidden_status = self.hidden_status_copy[:]
+            self.S_t.append(nodes_number - status_counts["I"])
             self.I_t.append(status_counts["I"])
-            self.U_t.append(status_counts["U"] + rest_number)
+            self.U_t.append(nodes_number - status_counts["A"])
             self.A_t.append(status_counts["A"])
         else:
             self.S_t.append(len(nodes))
@@ -401,10 +391,10 @@ class MarkovModel:
             self.U_t.append(len(nodes))
             self.A_t.append(0)
 
-    def run(self, processes=None):
+    def run(self):
         all_nodes = list(self.network.keys())
         for i in range(self.tmin, self.tmax):
-            self.run_chain(all_nodes, processes, len(all_nodes))
+            self.run_chain(all_nodes, len(all_nodes))
             self.times.append(i)
 
 def multiplex_network(nodes_number, physical_network, hidden_network):

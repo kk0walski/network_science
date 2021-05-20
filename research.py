@@ -75,7 +75,7 @@ def do_research(filepath, tree_level):
             print("I/O error")
     
     parameters = []
-    for network in ["barabassi100", "barabassi1000", "hiv", "school", "infectious"]:
+    for network in ["school", "infectious", "barabassi1000"]:
         for media in np.round(np.linspace(0,1,11), 2):
             for physical_prob in np.round(np.linspace(0,1,11), 2):
                 for hidden_prob in np.round(np.linspace(0,1,11), 2):
@@ -83,10 +83,10 @@ def do_research(filepath, tree_level):
                         for _lambda in np.round(np.linspace(0,1,11), 2):
                             parameters.append((filepath, column_names, tree_level, network, physical_prob, hidden_prob, infectivity, _lambda, media))
 
-    print("Parametry wygenerowae")
+    print("Parametry wygenerowane")
 
     with Pool(initializer=init_worker) as pool:
-        for _ in progressbar.progressbar(pool.imap_unordered(experiment, parameters)):
+        for _ in progressbar.progressbar(pool.imap_unordered(experiment, parameters, chunksize=250)):
             pass
 
 
