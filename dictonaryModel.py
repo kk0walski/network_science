@@ -374,27 +374,26 @@ class MarkovModel:
         else:
             return self.filter_node_rec(0, node)
 
-    def run_chain(self, nodes, nodes_number=1000):
+    def run_chain(self):
         infected_nodes = np.where(self.physical_status)[0]
 
         if len(infected_nodes) > 0:
-            status_counts = defaultdict(int, Counter(itertools.chain(*map(self.hidden_chain, filter(self.filter_node, range(nodes_number))))))
+            status_counts = defaultdict(int, Counter(itertools.chain(*map(self.hidden_chain, filter(self.filter_node, range(self.nodes_number))))))
             self.physical_status = self.physical_status_copy[:]
             self.hidden_status = self.hidden_status_copy[:]
-            self.S_t.append(nodes_number - status_counts["I"])
+            self.S_t.append(self.nodes_number - status_counts["I"])
             self.I_t.append(status_counts["I"])
-            self.U_t.append(nodes_number - status_counts["A"])
+            self.U_t.append(self.nodes_number - status_counts["A"])
             self.A_t.append(status_counts["A"])
         else:
-            self.S_t.append(len(nodes))
+            self.S_t.append(self.nodes_number)
             self.I_t.append(0)
-            self.U_t.append(len(nodes))
+            self.U_t.append(self.nodes_number)
             self.A_t.append(0)
 
     def run(self):
-        all_nodes = list(self.network.keys())
         for i in range(self.tmin, self.tmax):
-            self.run_chain(all_nodes, len(all_nodes))
+            self.run_chain()
             self.times.append(i)
 
 def multiplex_network(nodes_number, physical_network, hidden_network):
