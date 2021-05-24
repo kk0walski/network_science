@@ -15,7 +15,7 @@ class MarkovModel:
         initial_infecteds=None,
         rho=None,
         tmin=0,
-        tmax=10,
+        tmax=20,
     ):
 
         self.nodes_number = nodes_number
@@ -24,6 +24,7 @@ class MarkovModel:
         self.tmax = tmax
         self.m = 0
         self.a = [value['degree'] for value in network.values()]
+        #self.a = [1 for _ in range(nodes_number)]
         self.hidden_status_original = np.array(['U' for _ in range(nodes_number)])
         self.physical_status_original = np.array(['S' for _ in range(nodes_number)])
 
@@ -46,12 +47,13 @@ class MarkovModel:
             self.physical_status_original[node] = "I"
 
     def rnd(self):
-        exp = np.random.randint(-11, -1)
+        exp = np.random.randint(-5, -1)
         significand = 0.9 * np.random.random() + 0.1
         return significand * 10 ** exp
 
     def init_simulation(self):
         self.tmin = 0
+        np.random.seed(100)
         self.times = [self.tmin]
         self.hidden_status = (self.hidden_status_original == "A")
         self.hidden_status_copy = self.hidden_status[:]
@@ -379,8 +381,8 @@ class MarkovModel:
 
         if len(infected_nodes) > 0:
             status_counts = defaultdict(int, Counter(itertools.chain(*map(self.hidden_chain, filter(self.filter_node, range(self.nodes_number))))))
-            self.physical_status = self.physical_status_copy[:]
-            self.hidden_status = self.hidden_status_copy[:]
+            self.physical_status, self.physical_status_copy = self.physical_status_copy, self.physical_status
+            self.hidden_status, self.hidden_status_copy = self.hidden_status_copy, self.hidden_status
             self.S_t.append(self.nodes_number - status_counts["I"])
             self.I_t.append(status_counts["I"])
             self.U_t.append(self.nodes_number - status_counts["A"])
