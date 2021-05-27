@@ -23,8 +23,8 @@ class MarkovModel:
         self.tmin = tmin
         self.tmax = tmax
         self.m = 0
-        self.a = [value['degree'] for value in network.values()]
-        #self.a = [1 for _ in range(nodes_number)]
+        #self.a = [value['degree'] for value in network.values()]
+        self.a = [1 for _ in range(nodes_number)]
         self.hidden_status_original = np.array(['U' for _ in range(nodes_number)])
         self.physical_status_original = np.array(['S' for _ in range(nodes_number)])
 
